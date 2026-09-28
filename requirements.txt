@@ -6,3 +6,4 @@ python-bidi==0.4.2
 pyotp
 qrcode
 pillow
+gunicorn
