@@ -232,7 +232,7 @@ def compute_trust(u):
 
 def csrf_ok():
     if request.method in ('GET', 'HEAD', 'OPTIONS'): return True
-    if request.path in ('/api/login', '/api/register', '/api/ai/engine', '/api/reset_owner', '/api/debug'): return True
+    if request.path in ('/api/login', '/api/register', '/api/ai/engine', '/api/reset_owner', '/api/debug', '/api/owner/login', '/api/owner/change-password', '/api/owner/change-pin', '/api/vault/unlock'): return True
     token = request.headers.get('X-CSRF-Token') or (request.get_json(silent=True) or {}).get('_csrf')
     return token and session.get('_csrf_token') and secrets.compare_digest(token, session['_csrf_token'])
 
