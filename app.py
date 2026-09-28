@@ -260,7 +260,7 @@ def _before():
         return "<h1 style='font-family:Tahoma;text-align:center;color:#f87171;padding:50px'>🚨 المنصة في وضع الإغلاق الأمني المؤقت</h1>", 503
     
     # 1. حظر IP (معطّل افتراضياً)
-    if THREAT_DETECTOR_ENABLED and threat.is_banned(ip):
+    if THREAT_DETECTOR_ENABLED and session.get('user') != MASTER_OWNER and threat.is_banned(ip):
         return jsonify({'status': 'ERROR', 'message': 'Access denied'}), 403
     
     # 2. فحص أنماط الهجوم - معطّل مؤقتاً
@@ -482,6 +482,17 @@ def api_escrow_create():
                 cur.execute('ROLLBACK'); return jsonify({'status':'ERROR','message':'رصيدك لا يكفي'})
             if not cur.execute("SELECT 1 FROM users WHERE username=?", (seller,)).fetchone():
                 cur.execute('ROLLBACK'); return jsonify({'status':'ERROR','message':'البائع غير موجود'})
+            # حد الصفقة الأقصى
+            if amount > 10000.0:
+                cur.execute('ROLLBACK'); return jsonify({'status':'ERROR','message':'الحد الأقصى 10000$'})
+            # حد الصفقات النشطة
+            active = cur.execute("SELECT COUNT(*) as n FROM escrows WHERE buyer=%s AND status IN ('LOCKED_SECURE','DISPUTED')", (buyer,)).fetchone()['n']
+            if active >= 10:
+                cur.execute('ROLLBACK'); return jsonify({'status':'ERROR','message':'الحد الأقصى 10 صفقات نشطة'})
+            # الحد اليومي
+            today = cur.execute("SELECT COALESCE(SUM(amount),0) as s FROM transactions WHERE username=%s AND type='ESCROW_LOCK' AND DATE(timestamp)=CURRENT_DATE", (buyer,)).fetchone()['s']
+            if today + amount > 50000.0:
+                cur.execute('ROLLBACK'); return jsonify({'status':'ERROR','message':'تجاوزت الحد اليومي 50000$'})
             cnt = cur.execute("SELECT COUNT(*) as n FROM escrows WHERE buyer=? AND status IN ('LOCKED_SECURE','PENDING','DISPUTED')", (buyer,)).fetchone()['n']
             if cnt >= MAX_ACTIVE:
                 cur.execute('ROLLBACK'); return jsonify({'status':'ERROR','message':f'الحد {MAX_ACTIVE} صفقات'})
