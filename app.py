@@ -4,6 +4,23 @@ from datetime import datetime, timedelta
 from flask import Flask, jsonify, request, render_template_string, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+# ============ تحميل متغيرات البيئة من .env ============
+def _load_env():
+    import os as _os
+    env_path = _os.path.join(_os.path.dirname(__file__), '.env')
+    if not _os.path.exists(env_path):
+        return
+    with open(env_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if '=' in line and not line.startswith('#'):
+                k, v = line.split('=', 1)
+                if k not in _os.environ:
+                    _os.environ[k] = v
+
+_load_env()
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', PERMANENT_SESSION_LIFETIME=timedelta(hours=2))
@@ -1552,8 +1569,8 @@ def public_profile(username):
 import urllib.request
 import json as _json
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8695940596:AAHpE7FNN4wLYPYAGfQNlSts-xSuhBn59LQ")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "6323537194")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 
 def send_telegram(msg):
@@ -1930,8 +1947,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-GMAIL_USER = os.environ.get("GMAIL_USER", "e65461123@gmail.com")
-GMAIL_PASS = os.environ.get("GMAIL_PASS", "kfsdimlkphlsruaq")
+GMAIL_USER = os.environ.get("GMAIL_USER", "")
+GMAIL_PASS = os.environ.get("GMAIL_PASS", "")
 
 
 

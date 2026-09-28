@@ -1,0 +1,13 @@
+.env
+token.txt
+*.pyc
+__pycache__/
+*.db
+*.db-wal
+*.db-shm
+.secret.key
+.env.encrypted
+escrow_backup_*/
+backup_app_*.py
+backup_db_*.db
+fonts/
