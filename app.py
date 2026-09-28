@@ -70,6 +70,7 @@ login_attempts, register_attempts = {}, {}
 banned_ips = {}
 last_cleanup = time.time()
 threat = ThreatDetector()
+THREAT_DETECTOR_ENABLED = os.environ.get("THREAT_ENABLED", "0") == "1"
 
 # ============ DB ============
 def get_db():
@@ -256,8 +257,8 @@ def _before():
     if threat.is_lockdown() and request.path not in ('/health',):
         return "<h1 style='font-family:Tahoma;text-align:center;color:#f87171;padding:50px'>🚨 المنصة في وضع الإغلاق الأمني المؤقت</h1>", 503
     
-    # 1. حظر IP
-    if threat.is_banned(ip):
+    # 1. حظر IP (معطّل افتراضياً)
+    if THREAT_DETECTOR_ENABLED and threat.is_banned(ip):
         return jsonify({'status': 'ERROR', 'message': 'Access denied'}), 403
     
     # 2. فحص أنماط الهجوم
