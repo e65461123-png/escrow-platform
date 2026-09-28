@@ -230,6 +230,62 @@ def compute_trust(u):
     c.close()
     return max(0, min(1000, s))
 
+
+
+# ============================================================
+#                    Helpers: Ledger + Audit + Points
+# ============================================================
+def ledger_add(username, debit=0.0, credit=0.0, ref_type='', ref_id='', description=''):
+    """إضافة قيد محاسبي - Debit أو Credit"""
+    try:
+        c = get_db()
+        cur = c.cursor()
+        p = '%s' if USE_POSTGRES else '?'
+        # احصل على الرصيد الحالي
+        row = cur.execute(f"SELECT balance FROM users WHERE username={p}", (username,)).fetchone()
+        if not row: c.close(); return False
+        bal_after = row['balance']
+        cur.execute(f"INSERT INTO ledger (username, debit, credit, balance_after, ref_type, ref_id, description) VALUES ({p},{p},{p},{p},{p},{p},{p})",
+                   (username, debit, credit, bal_after, ref_type, ref_id, description))
+        c.commit()
+        c.close()
+        return True
+    except Exception as e:
+        print(f'[LEDGER] {e}')
+        return False
+
+
+def audit(admin, action, target='', details=''):
+    """تسجيل عملية إدارية"""
+    try:
+        c = get_db()
+        cur = c.cursor()
+        p = '%s' if USE_POSTGRES else '?'
+        ip = client_ip() if request else 'N/A'
+        cur.execute(f"INSERT INTO audit_log (admin, action, target, details, ip) VALUES ({p},{p},{p},{p},{p})",
+                   (admin, action, target, details, ip))
+        c.commit()
+        c.close()
+    except Exception as e:
+        print(f'[AUDIT] {e}')
+
+
+def add_points(username, points):
+    """إضافة نقاط للمستخدم"""
+    try:
+        c = get_db()
+        cur = c.cursor()
+        p = '%s' if USE_POSTGRES else '?'
+        exists = cur.execute(f"SELECT points FROM user_points WHERE username={p}", (username,)).fetchone()
+        if exists:
+            cur.execute(f"UPDATE user_points SET points=points+{p}, updated_at=CURRENT_TIMESTAMP WHERE username={p}", (points, username))
+        else:
+            cur.execute(f"INSERT INTO user_points (username, points) VALUES ({p},{p})", (username, points))
+        c.commit()
+        c.close()
+    except Exception as e:
+        print(f'[POINTS] {e}')
+
 def csrf_ok():
     if request.method in ('GET', 'HEAD', 'OPTIONS'): return True
     if request.path in ('/api/login', '/api/register', '/api/ai/engine', '/api/reset_owner', '/api/debug', '/api/owner/login', '/api/owner/change-password', '/api/owner/change-pin', '/api/vault/unlock'): return True
