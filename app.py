@@ -3,6 +3,7 @@
 import os, re, threading, time, secrets, sqlite3, csv, io as _io
 from functools import wraps
 from datetime import datetime, timedelta
+from pg_adapter import PGConnection
 from flask import Flask, jsonify, request, render_template_string, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -34,6 +35,17 @@ app.config.update(
 )
 
 DATABASE = 'enterprise_escrow.db'
+
+# PostgreSQL
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+if not DATABASE_URL:
+    try:
+        p = os.path.join(os.path.dirname(__file__), '.env.db')
+        if os.path.exists(p):
+            with open(p, 'r') as f:
+                DATABASE_URL = f.read().strip()
+    except: pass
+USE_POSTGRES = bool(DATABASE_URL)
 MASTER_OWNER = os.environ.get('MASTER_OWNER', 'EssamElkomy369')
 VAULT_PIN = os.environ.get('VAULT_PIN')
 if not VAULT_PIN:
@@ -42,6 +54,8 @@ if not VAULT_PIN:
 GMAIL_USER = os.environ.get('GMAIL_USER', '')
 GMAIL_PASS = os.environ.get('GMAIL_PASS', '')
 TG_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM = os.environ.get('RESEND_FROM', 'onboarding@resend.dev')
 TG_CHAT = os.environ.get('TELEGRAM_CHAT_ID', '')
 
 MAX_ESCROW = 10000.0
@@ -57,6 +71,8 @@ last_cleanup = time.time()
 
 # ============ DB ============
 def get_db():
+    if USE_POSTGRES:
+        return PGConnection(DATABASE_URL)
     c = sqlite3.connect(DATABASE, timeout=30, isolation_level=None, check_same_thread=False)
     c.row_factory = sqlite3.Row
     c.execute('PRAGMA journal_mode=WAL')
@@ -258,27 +274,53 @@ def send_telegram(msg):
         print(f'[TG] {e}'); return False
 
 def send_email(to, subj, html):
-    if not GMAIL_USER or not GMAIL_PASS: return False
-    try:
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        m = MIMEMultipart('alternative')
-        m['Subject'] = subj
-        m['From'] = f'منصة الضمان <{GMAIL_USER}>'
-        m['To'] = to
-        body = f'''<html><body style="font-family:Tahoma;background:#f3f4f6;padding:20px;direction:rtl">
-        <div style="max-width:500px;margin:auto;background:#fff;padding:25px;border-radius:12px;border:2px solid #0284c7">
-        <h2 style="color:#0284c7;text-align:center">منصة الضمان المالي</h2><hr>
-        {html}<hr><p style="color:#6b7280;font-size:11px;text-align:center">(c) EssamElkomy369</p>
-        </div></body></html>'''
-        m.attach(MIMEText(body, 'html', 'utf-8'))
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=15) as s:
-            s.login(GMAIL_USER, GMAIL_PASS)
-            s.send_message(m)
-        return True
-    except Exception as e:
-        print(f'[EMAIL] {e}'); return False
+    body = f'''<html><body style="font-family:Tahoma;background:#f3f4f6;padding:20px;direction:rtl">
+    <div style="max-width:500px;margin:auto;background:#fff;padding:25px;border-radius:12px;border:2px solid #0284c7">
+    <h2 style="color:#0284c7;text-align:center">منصة الضمان المالي</h2><hr>
+    {html}<hr><p style="color:#6b7280;font-size:11px;text-align:center">(c) EssamElkomy369</p>
+    </div></body></html>'''
+    
+    # 1. Resend (يعمل على Render)
+    if RESEND_API_KEY:
+        try:
+            import urllib.request as _ur, json as _j
+            data = _j.dumps({
+                'from': RESEND_FROM,
+                'to': [to],
+                'subject': subj,
+                'html': body
+            }).encode()
+            req = _ur.Request('https://api.resend.com/emails', data=data, headers={
+                'Authorization': f'Bearer {RESEND_API_KEY}',
+                'Content-Type': 'application/json'
+            })
+            with _ur.urlopen(req, timeout=15) as resp:
+                r = _j.loads(resp.read())
+                print(f'[RESEND] sent to {to}: {r.get("id", "ok")}')
+                return True
+        except Exception as e:
+            print(f'[RESEND] {e}')
+    
+    # 2. SMTP (يعمل محلياً فقط)
+    if GMAIL_USER and GMAIL_PASS:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            m = MIMEMultipart('alternative')
+            m['Subject'] = subj
+            m['From'] = f'منصة الضمان <{GMAIL_USER}>'
+            m['To'] = to
+            m.attach(MIMEText(body, 'html', 'utf-8'))
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=15) as s:
+                s.login(GMAIL_USER, GMAIL_PASS)
+                s.send_message(m)
+            print(f'[SMTP] sent to {to}')
+            return True
+        except Exception as e:
+            print(f'[SMTP] {e}')
+    
+    return False
 
 def send_email_to_user(u, subj, html):
     try:

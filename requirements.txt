@@ -7,3 +7,4 @@ pyotp
 qrcode
 pillow
 gunicorn
+pg8000
