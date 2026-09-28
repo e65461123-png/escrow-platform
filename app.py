@@ -1917,6 +1917,55 @@ def api_security_unlock():
     return jsonify({'status': 'SUCCESS', 'message': 'Lockdown lifted'})
 
 
+
+
+# ============================================================
+#                    Debug Endpoint (للمالك فقط)
+# ============================================================
+@app.route('/api/debug', methods=['GET'])
+def debug_info():
+    """يعرض معلومات الاتصال بالخادم - محمي بكلمة سرية"""
+    from flask import request
+    secret = request.args.get('key', '')
+    if secret != 'EssamDebug2026':
+        return jsonify({'status': 'ERROR', 'message': 'Access denied'}), 403
+    
+    import platform
+    info = {
+        'status': 'SUCCESS',
+        'USE_POSTGRES': USE_POSTGRES,
+        'DATABASE_URL_set': bool(DATABASE_URL),
+        'DATABASE_URL_length': len(DATABASE_URL) if DATABASE_URL else 0,
+        'DATABASE_URL_prefix': DATABASE_URL[:30] + '...' if DATABASE_URL else 'EMPTY',
+        'DATABASE_URL_suffix': '...' + DATABASE_URL[-20:] if DATABASE_URL else 'EMPTY',
+        'IS_PRODUCTION': IS_PRODUCTION,
+        'THREAT_ENABLED': os.environ.get('THREAT_ENABLED', '0'),
+        'GMAIL_USER': GMAIL_USER or 'EMPTY',
+        'RESEND_KEY_set': bool(os.environ.get('RESEND_API_KEY')),
+        'RESEND_FROM': os.environ.get('RESEND_FROM', 'EMPTY'),
+        'TG_TOKEN_set': bool(TG_TOKEN),
+        'python_version': platform.python_version(),
+        'platform': platform.system(),
+    }
+    
+    # اختبار اتصال قاعدة البيانات
+    try:
+        c = get_db()
+        cur = c.cursor()
+        cur.execute("SELECT COUNT(*) as n FROM users")
+        users_count = cur.fetchone()['n']
+        cur.execute("SELECT username, role FROM users ORDER BY id LIMIT 5")
+        sample = [{'username': r['username'], 'role': r['role']} for r in cur.fetchall()]
+        c.close()
+        info['db_connection'] = 'OK'
+        info['users_count'] = users_count
+        info['sample_users'] = sample
+    except Exception as e:
+        info['db_connection'] = f'ERROR: {str(e)[:200]}'
+    
+    return jsonify(info)
+
+
 if __name__ == '__main__':
     _PORT = int(os.environ.get('PORT', 5000))
     _HOST = '0.0.0.0' if os.environ.get('PORT') else '127.0.0.1'
