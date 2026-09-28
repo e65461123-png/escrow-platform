@@ -1,14 +1,31 @@
+# Secrets
 .env
-token.txt
+.env.*
+.vault_key
+.vault_data
 .github_token
-*.pyc
-__pycache__/
+token.txt
+secret*.txt
+*.pem
+*.key
+
+# Database
 *.db
-*.db-wal
-*.db-shm
+*.db-*
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Backups
+backup_*
 *.bak
-app.py.backup_*
 app.py.old_*
-secret.key
-.env.encrypted
-fonts/
+
+# OS
+.DS_Store
+Thumbs.db

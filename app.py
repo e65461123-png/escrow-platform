@@ -4,6 +4,7 @@ import os, re, threading, time, secrets, sqlite3, csv, io as _io
 from functools import wraps
 from datetime import datetime, timedelta
 from pg_adapter import PGConnection
+from security_hardening import ThreatDetector, EncryptedVault, scan_directory, scan_file
 from flask import Flask, jsonify, request, render_template_string, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -68,6 +69,7 @@ db_lock = threading.Lock()
 login_attempts, register_attempts = {}, {}
 banned_ips = {}
 last_cleanup = time.time()
+threat = ThreatDetector()
 
 # ============ DB ============
 def get_db():
@@ -248,9 +250,34 @@ def cleanup():
 
 @app.before_request
 def _before():
+    ip = threat.get_ip(request)
+    
+    # 0. القفل التلقائي
+    if threat.is_lockdown() and request.path not in ('/health',):
+        return "<h1 style='font-family:Tahoma;text-align:center;color:#f87171;padding:50px'>🚨 المنصة في وضع الإغلاق الأمني المؤقت</h1>", 503
+    
+    # 1. حظر IP
+    if threat.is_banned(ip):
+        return jsonify({'status': 'ERROR', 'message': 'Access denied'}), 403
+    
+    # 2. فحص أنماط الهجوم
+    threat_check = threat.check_payload(request)
+    if threat_check:
+        threat.track_attempt(ip, 'injection')
+        log_event(f"THREAT_{threat_check['threat']}", ip)
+        return jsonify({'status': 'ERROR', 'message': 'Blocked'}), 403
+    
+    # 3. فحص الملفات الحساسة
+    suspicious_paths = ('/.env', '/.git', '/.ssh', '/wp-admin', '/phpmyadmin', '/config', '/backup')
+    if any(request.path.startswith(p) for p in suspicious_paths):
+        threat.track_attempt(ip, 'scan')
+        log_event('PATH_SCAN', ip)
+        return jsonify({'status': 'ERROR', 'message': 'Forbidden'}), 403
+    
     cleanup()
     if request.method == 'POST':
         if not csrf_ok():
+            threat.track_attempt(ip, 'csrf_fail')
             return jsonify({'status': 'ERROR', 'message': 'CSRF'}), 403
 
 @app.after_request
@@ -1815,6 +1842,80 @@ def index():
 
 
 # ============ MAIN BLOCK ============
+
+
+# ============================================================
+#                    Security Endpoints
+# ============================================================
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'ok', 'time': int(time.time())})
+
+
+@app.route('/api/security/scan', methods=['POST'])
+@login_required
+def api_security_scan():
+    """يفحص المشروع بحثاً عن أسرار مكشوفة - للمالك فقط"""
+    if not is_admin():
+        return jsonify({'status': 'ERROR', 'message': 'مرفوض'}), 403
+    try:
+        results = scan_directory('.')
+        total_secrets = sum(len(r['secrets']) for r in results)
+        if results:
+            threat.activate_lockdown(1)  # إغلاق مؤقت للحماية
+            log_event('SECRET_LEAK_DETECTED', session['user'])
+        return jsonify({
+            'status': 'SUCCESS',
+            'files_with_secrets': len(results),
+            'total_secrets': total_secrets,
+            'details': results[:10]
+        })
+    except Exception as e:
+        return jsonify({'status': 'ERROR', 'message': str(e)})
+
+
+@app.route('/api/security/status', methods=['GET'])
+@login_required
+def api_security_status():
+    """حالة الأمان الحالية - للمالك فقط"""
+    if not is_admin():
+        return jsonify({'status': 'ERROR', 'message': 'مرفوض'}), 403
+    with threat.lock:
+        return jsonify({
+            'status': 'SUCCESS',
+            'lockdown': threat.lockdown,
+            'lockdown_until': threat.lockdown_until,
+            'banned_ips': len(threat.banned),
+            'active_attempts': len(threat.attempts),
+            'time': int(time.time())
+        })
+
+
+@app.route('/api/security/lockdown', methods=['POST'])
+@login_required
+def api_security_lockdown():
+    """تفعيل الإغلاق الفوري"""
+    if not is_admin():
+        return jsonify({'status': 'ERROR', 'message': 'مرفوض'}), 403
+    minutes = int((request.get_json(silent=True) or {}).get('minutes', 30))
+    threat.activate_lockdown(minutes)
+    log_event('MANUAL_LOCKDOWN', session['user'])
+    return jsonify({'status': 'SUCCESS', 'message': f'Lockdown activated for {minutes}min'})
+
+
+@app.route('/api/security/unlock', methods=['POST'])
+@login_required
+def api_security_unlock():
+    """إلغاء الإغلاق"""
+    if not is_admin():
+        return jsonify({'status': 'ERROR', 'message': 'مرفوض'}), 403
+    with threat.lock:
+        threat.lockdown = False
+        threat.lockdown_until = 0
+    log_event('MANUAL_UNLOCK', session['user'])
+    return jsonify({'status': 'SUCCESS', 'message': 'Lockdown lifted'})
+
+
 if __name__ == '__main__':
     _PORT = int(os.environ.get('PORT', 5000))
     _HOST = '0.0.0.0' if os.environ.get('PORT') else '127.0.0.1'
