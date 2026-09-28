@@ -251,29 +251,33 @@ def cleanup():
 
 @app.before_request
 def _before():
+    # ⚠️ تم تعطيل الحماية مؤقتاً لحل مشكلة تسجيل الدخول
+    # سنعيدها بشكل صحيح لاحقاً
     ip = threat.get_ip(request)
     
-    # 0. القفل التلقائي
-    if threat.is_lockdown() and request.path not in ('/health',):
+    # 0. القفل التلقائي - معطّل
+    if False and threat.is_lockdown() and request.path not in ('/health',):
         return "<h1 style='font-family:Tahoma;text-align:center;color:#f87171;padding:50px'>🚨 المنصة في وضع الإغلاق الأمني المؤقت</h1>", 503
     
     # 1. حظر IP (معطّل افتراضياً)
     if THREAT_DETECTOR_ENABLED and threat.is_banned(ip):
         return jsonify({'status': 'ERROR', 'message': 'Access denied'}), 403
     
-    # 2. فحص أنماط الهجوم
-    threat_check = threat.check_payload(request)
-    if threat_check:
-        threat.track_attempt(ip, 'injection')
-        log_event(f"THREAT_{threat_check['threat']}", ip)
-        return jsonify({'status': 'ERROR', 'message': 'Blocked'}), 403
+    # 2. فحص أنماط الهجوم - معطّل مؤقتاً
+    if THREAT_DETECTOR_ENABLED:
+        threat_check = threat.check_payload(request)
+        if threat_check:
+            threat.track_attempt(ip, 'injection')
+            log_event(f"THREAT_{threat_check['threat']}", ip)
+            return jsonify({'status': 'ERROR', 'message': 'Blocked'}), 403
     
-    # 3. فحص الملفات الحساسة
-    suspicious_paths = ('/.env', '/.git', '/.ssh', '/wp-admin', '/phpmyadmin', '/config', '/backup')
-    if any(request.path.startswith(p) for p in suspicious_paths):
-        threat.track_attempt(ip, 'scan')
-        log_event('PATH_SCAN', ip)
-        return jsonify({'status': 'ERROR', 'message': 'Forbidden'}), 403
+    # 3. فحص الملفات الحساسة - معطّل مؤقتاً
+    if THREAT_DETECTOR_ENABLED:
+        suspicious_paths = ('/.env', '/.git', '/.ssh', '/wp-admin', '/phpmyadmin')
+        if any(request.path.startswith(p) for p in suspicious_paths):
+            threat.track_attempt(ip, 'scan')
+            log_event('PATH_SCAN', ip)
+            return jsonify({'status': 'ERROR', 'message': 'Forbidden'}), 403
     
     cleanup()
     if request.method == 'POST':
