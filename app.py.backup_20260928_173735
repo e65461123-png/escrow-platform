@@ -22,22 +22,12 @@ def _load_env():
 _load_env()
 
 app = Flask(__name__)
-IS_PRODUCTION = bool(os.environ.get("RENDER")) or os.environ.get("FLASK_ENV") == "production"
-_SK = os.environ.get("SECRET_KEY")
-if not _SK:
-    if IS_PRODUCTION:
-        raise RuntimeError("SECRET_KEY is required in production")
-    _SK = secrets.token_hex(32)
-app.secret_key = _SK
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', PERMANENT_SESSION_LIFETIME=timedelta(hours=2))
 
 DATABASE = 'enterprise_escrow.db'
 MASTER_OWNER = "EssamElkomy369"
-VAULT_PIN = os.environ.get("VAULT_PIN")
-if not VAULT_PIN:
-    if IS_PRODUCTION:
-        raise RuntimeError("VAULT_PIN is required in production")
-    VAULT_PIN = "000000"
+VAULT_PIN = os.environ.get("VAULT_PIN", "369246")
 MAX_ESCROW = 10000.0
 db_lock = threading.Lock()
 login_attempts, register_attempts = {}, {}
@@ -171,19 +161,7 @@ def login_required(f):
     return w
 
 def is_admin():
-    uid = session.get('user_id')
-    if not uid:
-        return False
-    try:
-        conn = get_db()
-        u = conn.execute(
-            "SELECT role, status FROM users WHERE id=?",
-            (uid,)
-        ).fetchone()
-        conn.close()
-        return u is not None and u['role'] == 'OWNER' and u['status'] == 'ACTIVE'
-    except Exception:
-        return False
+    return session.get('role') == 'OWNER' and session.get('user') == MASTER_OWNER
 
 def vault_unlocked():
     return session.get('user') == MASTER_OWNER and session.get('vault_unlocked') is True
@@ -209,23 +187,6 @@ def compute_trust(u):
     s += min(d * 5, 300)
     conn.close()
     return max(0, min(1000, s))
-
-
-# ============================================================
-#                  Session Rotation
-# ============================================================
-SESSION_MAX_AGE = 30 * 60  # 30 دقيقة
-
-@app.before_request
-def _session_rotation():
-    """تجديد الجلسة كل 30 دقيقة تلقائياً"""
-    if 'user' not in session:
-        return
-    now = time.time()
-    last = session.get('_last_rotate', 0)
-    if now - last > SESSION_MAX_AGE:
-        session['_last_rotate'] = now
-        session.modified = True
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
@@ -264,10 +225,8 @@ def api_login():
     if r and check_password_hash(r["password_hash"], p):
         if r["status"] == "BANNED":
             return jsonify({"status": "ERROR", "message": "محظور"})
-        session.clear()
-        session.permanent = True
+        session.clear(); session.permanent = True
         session['user'] = u
-        session['user_id'] = r['id']
         session['role'] = r["role"]
         log_event("LOGIN", u)
         return jsonify({"status": "SUCCESS", "balance": r["balance"], "role": r["role"], "trust": r["trust_score"]})
