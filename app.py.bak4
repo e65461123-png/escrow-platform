@@ -428,31 +428,6 @@ def _before():
             return jsonify({'status': 'ERROR', 'message': 'Forbidden'}), 403
     
     cleanup()
-    
-    # فحص 2FA - لو المستخدم مفعّل 2FA ولسه ما اتحققش
-    if 'user' in session and not session.get('2fa_verified'):
-        # المسارات المسموح بها بدون 2FA
-        allowed = (
-            '/api/2fa/', '/api/logout', '/api/login', 
-            '/api/register', '/api/me', '/static/', '/favicon',
-        )
-        if not request.path.startswith(allowed):
-            try:
-                _c = get_db()
-                _p = _placeholder()
-                _u = _c.execute(
-                    f"SELECT totp_enabled FROM users WHERE username={_p}",
-                    (session.get('user'),)
-                ).fetchone()
-                _c.close()
-                if _u and _u['totp_enabled']:
-                    return jsonify({
-                        'status': 'NEED_2FA',
-                        'message': 'أكمل التحقق بـ 2FA'
-                    }), 401
-            except:
-                pass
-    
     if request.method == 'POST':
         if not request.path.startswith('/api/2fa/'):
             if not csrf_ok():

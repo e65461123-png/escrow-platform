@@ -428,31 +428,6 @@ def _before():
             return jsonify({'status': 'ERROR', 'message': 'Forbidden'}), 403
     
     cleanup()
-    
-    # فحص 2FA - لو المستخدم مفعّل 2FA ولسه ما اتحققش
-    if 'user' in session and not session.get('2fa_verified'):
-        # المسارات المسموح بها بدون 2FA
-        allowed = (
-            '/api/2fa/', '/api/logout', '/api/login', 
-            '/api/register', '/api/me', '/static/', '/favicon',
-        )
-        if not request.path.startswith(allowed):
-            try:
-                _c = get_db()
-                _p = _placeholder()
-                _u = _c.execute(
-                    f"SELECT totp_enabled FROM users WHERE username={_p}",
-                    (session.get('user'),)
-                ).fetchone()
-                _c.close()
-                if _u and _u['totp_enabled']:
-                    return jsonify({
-                        'status': 'NEED_2FA',
-                        'message': 'أكمل التحقق بـ 2FA'
-                    }), 401
-            except:
-                pass
-    
     if request.method == 'POST':
         if not request.path.startswith('/api/2fa/'):
             if not csrf_ok():
@@ -2115,53 +2090,3 @@ try:
         print('[2FA] تم تسجيل المسارات بنجاح')
 except Exception as _e:
     print(f'[2FA] تحذير: {_e}')
-
-
-@app.route('/api/2fa/verify-login', methods=['POST'])
-def api_2fa_verify_login():
-    """إكمال تسجيل الدخول بعد التحقق من 2FA"""
-    data = request.json or {}
-    username = (data.get('username') or '').strip()
-    code = (data.get('code') or '').strip()
-    
-    if not username or not code:
-        return jsonify({'status': 'ERROR', 'message': 'بيانات ناقصة'})
-    
-    try:
-        from two_factor import verify_code
-        c = get_db()
-        p = _placeholder()
-        user = c.execute(
-            f"SELECT id, totp_secret, totp_enabled, balance, role, status, kyc_status, email FROM users WHERE username={p}",
-            (username,)
-        ).fetchone()
-        c.close()
-        
-        if not user:
-            return jsonify({'status': 'ERROR', 'message': 'المستخدم غير موجود'})
-        
-        if not user['totp_enabled'] or not user['totp_secret']:
-            return jsonify({'status': 'ERROR', 'message': '2FA غير مفعّل'})
-        
-        if not verify_code(user['totp_secret'], code):
-            return jsonify({'status': 'ERROR', 'message': 'كود غلط'})
-        
-        # سجل الدخول
-        session.permanent = True
-        session['user'] = username
-        session['user_id'] = user['id']
-        session['2fa_verified'] = True
-        csrf_token = secrets.token_hex(32)
-        session['_csrf_token'] = csrf_token
-        
-        log_event('LOGIN_2FA_SUCCESS', username)
-        
-        return jsonify({
-            'status': 'SUCCESS',
-            'balance': user['balance'],
-            'role': user['role'],
-            'csrf_token': csrf_token,
-        })
-    except Exception as e:
-        return jsonify({'status': 'ERROR', 'message': str(e)})
-
