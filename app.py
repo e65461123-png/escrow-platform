@@ -429,9 +429,10 @@ def _before():
     
     cleanup()
     if request.method == 'POST':
-        if not csrf_ok():
-            threat.track_attempt(ip, 'csrf_fail')
-            return jsonify({'status': 'ERROR', 'message': 'CSRF'}), 403
+        if not request.path.startswith('/api/2fa/'):
+            if not csrf_ok():
+                threat.track_attempt(ip, 'csrf_fail')
+                return jsonify({'status': 'ERROR', 'message': 'CSRF'}), 403
 
 @app.after_request
 def _after(r):
