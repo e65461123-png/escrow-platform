@@ -7,13 +7,13 @@ from pg_adapter import PGConnection
 from security_hardening import ThreatDetector, EncryptedVault, scan_directory, scan_file
 from flask import Flask, jsonify, request, render_template_string, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-# 2FA
+# 2FA Import
 try:
     from two_factor import setup_routes as setup_2fa_routes
 except ImportError:
     setup_2fa_routes = None
 
-
+# 2FA
 # ============ Config ============
 def _load_env():
     p = os.path.join(os.path.dirname(__file__), '.env')
@@ -2027,3 +2027,15 @@ def debug_info():
 # ============================================================
 #                    Reset Owner Password (Emergency)
 # ============================================================
+
+
+
+# ============================================================
+# تسجيل مسارات 2FA (في نهاية الملف - بعد كل التعريفات)
+# ============================================================
+try:
+    if setup_2fa_routes:
+        setup_2fa_routes(app, get_db, _placeholder, login_required)
+        print('[2FA] تم تسجيل المسارات بنجاح')
+except Exception as _e:
+    print(f'[2FA] تحذير: {_e}')
