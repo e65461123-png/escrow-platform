@@ -1375,6 +1375,27 @@ th{color:#9ca3af;background:#0b0f19}
 <button class="bs" onclick="saveEmail()">💾 حفظ البريد</button>
 <p id="emailMsg"></p>
 </div>
+</div>
+
+<!-- Tab: KYC -->
+<div id="v_k" class="hide">
+<div class="section"><h3>📋 التحقق من الهوية (KYC)</h3>
+<div class="row"><span>الحالة:</span><b id="kStat" style="color:#fbbf24">NONE</b></div>
+<div class="fg"><label>الاسم الكامل</label><input id="kName" placeholder="كما في البطاقة"></div>
+<div class="fg"><label>رقم الهوية</label><input id="kId" placeholder="رقم البطاقة/الباسبور"></div>
+<button class="bs" onclick="kycSubmit()">📤 إرسال الطلب</button>
+<p id="kycMsg"></p>
+</div>
+</div>
+
+<!-- Tab: Admin -->
+<div id="v_a" class="hide">
+<div class="section admin" style="display:block">
+<h3>⚙️ لوحة المسؤول</h3>
+<a href="/vault" style="display:block;text-decoration:none;margin-bottom:10px"><button class="bgold">🔐 الخزنة الخاصة</button></a>
+<a href="/admin/dashboard" style="display:block;text-decoration:none;margin-bottom:10px"><button class="bp">📊 لوحة التحليلية</button></a>
+<div class="fg"><input id="banT" placeholder="اسم المستخدم"><div style="display:flex;gap:6px"><button class="bd" onclick="ban()">حظر</button><button class="bs" onclick="unban()">إلغاء</button></div></div>
+<div class="fg"><input type="number" id="rId" placeholder="رقم الصفقة"><button class="bw" onclick="refund()">💸 استرداد للمشتري</button></div>
 
 <!-- ========== 2FA Section ========== -->
 <div class="card" id="twofaCard" style="margin-top:14px;display:block">
@@ -1472,29 +1493,6 @@ async function disable2FA() {
 </script>
 
 <!-- ========== End 2FA Section ========== -->
-</div>
-
-<!-- Tab: KYC -->
-<div id="v_k" class="hide">
-<div class="section"><h3>📋 التحقق من الهوية (KYC)</h3>
-<div class="row"><span>الحالة:</span><b id="kStat" style="color:#fbbf24">NONE</b></div>
-<div class="fg"><label>الاسم الكامل</label><input id="kName" placeholder="كما في البطاقة"></div>
-<div class="fg"><label>رقم الهوية</label><input id="kId" placeholder="رقم البطاقة/الباسبور"></div>
-<button class="bs" onclick="kycSubmit()">📤 إرسال الطلب</button>
-<p id="kycMsg"></p>
-</div>
-</div>
-
-<!-- Tab: Admin -->
-<div id="v_a" class="hide">
-<div class="section admin" style="display:block">
-<h3>⚙️ لوحة المسؤول</h3>
-<a href="/vault" style="display:block;text-decoration:none;margin-bottom:10px"><button class="bgold">🔐 الخزنة الخاصة</button></a>
-<a href="/admin/dashboard" style="display:block;text-decoration:none;margin-bottom:10px"><button class="bp">📊 لوحة التحليلية</button></a>
-<div class="fg"><input id="banT" placeholder="اسم المستخدم"><div style="display:flex;gap:6px"><button class="bd" onclick="ban()">حظر</button><button class="bs" onclick="unban()">إلغاء</button></div></div>
-<div class="fg"><input type="number" id="rId" placeholder="رقم الصفقة"><button class="bw" onclick="refund()">💸 استرداد للمشتري</button></div>
-
-
 
 <div style="display:flex;gap:6px"><button class="bg" onclick="stats()">📊 إحصائيات</button><button class="bg" onclick="users()">👥 المستخدمون</button></div>
 <button class="bg" onclick="kycList()" style="margin-top:6px">📋 طلبات KYC</button>
