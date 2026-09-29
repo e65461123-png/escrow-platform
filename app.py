@@ -1398,83 +1398,51 @@ th{color:#9ca3af;background:#0b0f19}
 <div class="fg"><input type="number" id="rId" placeholder="رقم الصفقة"><button class="bw" onclick="refund()">💸 استرداد للمشتري</button></div>
 
 <!-- ========== 2FA Section ========== -->
-<div class="card" id="twofaCard" style="margin-top:14px">
+<div class="card" id="twofaCard" style="margin-top:14px;display:block">
   <div class="card-title">🔐 التحقق بخطوتين (2FA)</div>
-  <div id="twofaStatus" style="padding:10px;color:#f0ad4e;font-weight:bold">
-    ⏳ جاري التحقق...
+  <div style="padding:10px;color:#f0ad4e;font-weight:bold">
+    ⚠️ 2FA يزيد أمان حسابك بشكل كبير
   </div>
   
   <div id="twofaSetupBox" style="display:none;margin-top:15px">
     <div style="background:#1a1f2e;padding:15px;border-radius:10px;text-align:center">
-      <div style="color:#00d4aa;font-weight:bold;margin-bottom:10px">📱 امسح الـ QR بتطبيق Google Authenticator</div>
+      <div style="color:#00d4aa;font-weight:bold;margin-bottom:10px">📱 امسح الـ QR</div>
       <img id="twofaQR" style="max-width:220px;background:white;padding:10px;border-radius:10px" />
       <div style="color:#aaa;font-size:12px;margin-top:10px">
-        أو استخدم المفتاح: <code id="twofaSecret" style="color:#00d4aa"></code>
+        المفتاح: <code id="twofaSecret" style="color:#00d4aa"></code>
       </div>
     </div>
-    
     <div class="fg" style="margin-top:15px">
-      <label>أدخل الكود من التطبيق (6 أرقام)</label>
+      <label>أدخل الكود (6 أرقام)</label>
       <input id="twofaCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" />
     </div>
-    
     <button class="bp" onclick="verify2FA()" style="width:100%;padding:12px">
       ✅ تأكيد التفعيل
     </button>
   </div>
   
-  <div id="twofaActions" style="display:none;margin-top:15px">
-    <button id="twofaEnableBtn" class="bs" onclick="setup2FA()" style="width:100%;padding:12px">
-      🔓 تفعيل 2FA
-    </button>
-    <button id="twofaDisableBtn" class="bw" onclick="disable2FA()" style="width:100%;padding:12px;margin-top:10px;display:none">
-      🔒 إلغاء 2FA
-    </button>
-  </div>
+  <button id="twofaEnableBtn" class="bs" onclick="setup2FA()" style="width:100%;padding:12px;margin-top:15px">
+    🔓 تفعيل 2FA
+  </button>
+  <button id="twofaDisableBtn" class="bw" onclick="disable2FA()" style="width:100%;padding:12px;margin-top:10px;display:none">
+    🔒 إلغاء 2FA
+  </button>
 </div>
 
 <script>
-async function check2FAStatus() {
-  try {
-    const r = await fetch('/api/2fa/status');
-    const d = await r.json();
-    const statusEl = document.getElementById('twofaStatus');
-    const actionsEl = document.getElementById('twofaActions');
-    const setupEl = document.getElementById('twofaSetupBox');
-    const enableBtn = document.getElementById('twofaEnableBtn');
-    const disableBtn = document.getElementById('twofaDisableBtn');
-    
-    if (d.enabled) {
-      statusEl.innerHTML = '✅ 2FA مفعّل حالياً';
-      statusEl.style.color = '#00d4aa';
-      enableBtn.style.display = 'none';
-      disableBtn.style.display = 'block';
-    } else {
-      statusEl.innerHTML = '⚠️ 2FA غير مفعّل - حسابك أقل أماناً';
-      statusEl.style.color = '#f0ad4e';
-      enableBtn.style.display = 'block';
-      disableBtn.style.display = 'none';
-    }
-    setupEl.style.display = 'none';
-    actionsEl.style.display = 'block';
-  } catch(e) {
-    document.getElementById('twofaStatus').innerHTML = '❌ خطأ في التحميل';
-  }
-}
-
 async function setup2FA() {
   try {
-    const r = await fetch('/api/2fa/setup', {method:'POST'});
+    const r = await fetch('/api/2fa/setup', {method:'POST', headers:{'X-CSRF-Token': document.querySelector('meta[name=csrf]')?.content || ''}});
     const d = await r.json();
     if (d.status === 'OK') {
       document.getElementById('twofaQR').src = d.qr_code;
       document.getElementById('twofaSecret').textContent = d.secret;
       document.getElementById('twofaSetupBox').style.display = 'block';
-      document.getElementById('twofaActions').style.display = 'none';
+      document.getElementById('twofaEnableBtn').style.display = 'none';
     } else {
       alert('خطأ: ' + (d.message || 'فشل'));
     }
-  } catch(e) { alert('خطأ في الاتصال'); }
+  } catch(e) { alert('خطأ في الاتصال: ' + e.message); }
 }
 
 async function verify2FA() {
@@ -1488,19 +1456,16 @@ async function verify2FA() {
     });
     const d = await r.json();
     if (d.status === 'OK') {
-      alert('✅ تم تفعيل 2FA بنجاح!');
-      if (d.backup_codes) {
-        alert('احفظ الأكواد الاحتياطية:\n' + d.backup_codes.join('\n'));
-      }
-      check2FAStatus();
+      alert('✅ تم تفعيل 2FA!\n\nأكواد الطوارئ:\n' + (d.backup_codes||[]).join('\n'));
+      location.reload();
     } else {
       alert('خطأ: ' + (d.message || 'كود غير صحيح'));
     }
-  } catch(e) { alert('خطأ في الاتصال'); }
+  } catch(e) { alert('خطأ: ' + e.message); }
 }
 
 async function disable2FA() {
-  const code = prompt('أدخل كود 2FA الحالي لإلغاء التفعيل:');
+  const code = prompt('أدخل كود 2FA:');
   if (!code) return;
   try {
     const r = await fetch('/api/2fa/disable', {
@@ -1509,18 +1474,24 @@ async function disable2FA() {
       body: JSON.stringify({code: code})
     });
     const d = await r.json();
-    if (d.status === 'OK') {
-      alert('✅ تم إلغاء 2FA');
-      check2FAStatus();
-    } else {
-      alert('خطأ: ' + (d.message || 'فشل'));
-    }
-  } catch(e) { alert('خطأ في الاتصال'); }
+    if (d.status === 'OK') { alert('✅ تم إلغاء 2FA'); location.reload(); }
+    else { alert('خطأ: ' + (d.message || 'فشل')); }
+  } catch(e) { alert('خطأ: ' + e.message); }
 }
 
-// شغل التحقق لما الصفحة تفتح
-setTimeout(check2FAStatus, 500);
+// فحص حالة 2FA
+(async function() {
+  try {
+    const r = await fetch('/api/2fa/status');
+    const d = await r.json();
+    if (d.enabled) {
+      document.getElementById('twofaEnableBtn').style.display = 'none';
+      document.getElementById('twofaDisableBtn').style.display = 'block';
+    }
+  } catch(e) {}
+})();
 </script>
+
 <!-- ========== End 2FA Section ========== -->
 
 <div style="display:flex;gap:6px"><button class="bg" onclick="stats()">📊 إحصائيات</button><button class="bg" onclick="users()">👥 المستخدمون</button></div>
