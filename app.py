@@ -1376,102 +1376,7 @@ th{color:#9ca3af;background:#0b0f19}
 <p id="emailMsg"></p>
 </div>
 
-<!-- ========== 2FA Section ========== -->
-<div class="card" id="twofaCard" style="margin-top:14px;display:block">
-  <div class="card-title">🔐 التحقق بخطوتين (2FA)</div>
-  <div style="padding:10px;color:#f0ad4e;font-weight:bold">
-    ⚠️ 2FA يزيد أمان حسابك بشكل كبير
-  </div>
-  
-  <div id="twofaSetupBox" style="display:none;margin-top:15px">
-    <div style="background:#1a1f2e;padding:15px;border-radius:10px;text-align:center">
-      <div style="color:#00d4aa;font-weight:bold;margin-bottom:10px">📱 امسح الـ QR</div>
-      <img id="twofaQR" style="max-width:220px;background:white;padding:10px;border-radius:10px" />
-      <div style="color:#aaa;font-size:12px;margin-top:10px">
-        المفتاح: <code id="twofaSecret" style="color:#00d4aa"></code>
-      </div>
-    </div>
-    <div class="fg" style="margin-top:15px">
-      <label>أدخل الكود (6 أرقام)</label>
-      <input id="twofaCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" />
-    </div>
-    <button class="bp" onclick="verify2FA()" style="width:100%;padding:12px">
-      ✅ تأكيد التفعيل
-    </button>
-  </div>
-  
-  <button id="twofaEnableBtn" class="bs" onclick="setup2FA()" style="width:100%;padding:12px;margin-top:15px">
-    🔓 تفعيل 2FA
-  </button>
-  <button id="twofaDisableBtn" class="bw" onclick="disable2FA()" style="width:100%;padding:12px;margin-top:10px;display:none">
-    🔒 إلغاء 2FA
-  </button>
-</div>
 
-<script>
-async function setup2FA() {
-  try {
-    const r = await fetch('/api/2fa/setup', {method:'POST', headers:{'X-CSRF-Token': document.querySelector('meta[name=csrf]')?.content || ''}});
-    const d = await r.json();
-    if (d.status === 'OK') {
-      document.getElementById('twofaQR').src = d.qr_code;
-      document.getElementById('twofaSecret').textContent = d.secret;
-      document.getElementById('twofaSetupBox').style.display = 'block';
-      document.getElementById('twofaEnableBtn').style.display = 'none';
-    } else {
-      alert('خطأ: ' + (d.message || 'فشل'));
-    }
-  } catch(e) { alert('خطأ في الاتصال: ' + e.message); }
-}
-
-async function verify2FA() {
-  const code = document.getElementById('twofaCode').value.trim();
-  if (code.length !== 6) { alert('أدخل 6 أرقام'); return; }
-  try {
-    const r = await fetch('/api/2fa/verify-setup', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({code: code})
-    });
-    const d = await r.json();
-    if (d.status === 'OK') {
-      alert('✅ تم تفعيل 2FA!\n\nأكواد الطوارئ:\n' + (d.backup_codes||[]).join('\n'));
-      location.reload();
-    } else {
-      alert('خطأ: ' + (d.message || 'كود غير صحيح'));
-    }
-  } catch(e) { alert('خطأ: ' + e.message); }
-}
-
-async function disable2FA() {
-  const code = prompt('أدخل كود 2FA:');
-  if (!code) return;
-  try {
-    const r = await fetch('/api/2fa/disable', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({code: code})
-    });
-    const d = await r.json();
-    if (d.status === 'OK') { alert('✅ تم إلغاء 2FA'); location.reload(); }
-    else { alert('خطأ: ' + (d.message || 'فشل')); }
-  } catch(e) { alert('خطأ: ' + e.message); }
-}
-
-// فحص حالة 2FA
-(async function() {
-  try {
-    const r = await fetch('/api/2fa/status');
-    const d = await r.json();
-    if (d.enabled) {
-      document.getElementById('twofaEnableBtn').style.display = 'none';
-      document.getElementById('twofaDisableBtn').style.display = 'block';
-    }
-  } catch(e) {}
-})();
-</script>
-
-<!-- ========== End 2FA Section ========== -->
 </div>
 
 <!-- Tab: KYC -->
@@ -1500,6 +1405,49 @@ async function disable2FA() {
 <button class="bg" onclick="kycList()" style="margin-top:6px">📋 طلبات KYC</button>
 </div>
 </div>
+
+<div class="card" style="margin-top:14px">
+  <div class="card-title">🔐 التحقق بخطوتين (2FA)</div>
+  <div style="padding:12px;margin:10px 0;background:#2a1f0a;border-radius:8px;color:#f0ad4e;font-size:13px">
+    ⚠️ ننصح بتفعيل 2FA لحماية حسابك
+  </div>
+  <button class="bs" id="b2faSetup" style="width:100%;padding:12px" onclick="p2setup()">🔓 تفعيل 2FA</button>
+  <div id="p2box" style="display:none;margin-top:15px">
+    <div style="background:#1a1f2e;padding:15px;border-radius:10px;text-align:center">
+      <div style="color:#00d4aa;font-weight:bold;margin-bottom:10px">📱 امسح الـ QR</div>
+      <img id="p2qr" style="max-width:200px;background:white;padding:8px;border-radius:8px" />
+      <div style="color:#aaa;font-size:12px;margin-top:10px">المفتاح: <code id="p2sec" style="color:#00d4aa"></code></div>
+    </div>
+    <div style="margin-top:12px">
+      <input id="p2code" type="text" inputmode="numeric" maxlength="6" placeholder="أدخل 6 أرقام" style="width:100%;padding:12px;background:#0b0f19;border:1px solid #374151;border-radius:8px;color:#fff;text-align:center;font-size:18px" />
+    </div>
+    <button class="bp" style="width:100%;padding:12px;margin-top:10px" onclick="p2verify()">✅ تأكيد</button>
+  </div>
+</div>
+<script>
+async function p2setup(){
+  try{
+    const r=await fetch('/api/2fa/setup',{method:'POST'});
+    const d=await r.json();
+    if(d.status==='OK'){
+      document.getElementById('p2qr').src=d.qr_code;
+      document.getElementById('p2sec').textContent=d.secret;
+      document.getElementById('p2box').style.display='block';
+      document.getElementById('b2faSetup').style.display='none';
+    } else alert('خطأ: '+(d.message||'فشل'));
+  }catch(e){alert('خطأ: '+e.message)}
+}
+async function p2verify(){
+  const c=document.getElementById('p2code').value.trim();
+  if(c.length!==6){alert('أدخل 6 أرقام');return;}
+  try{
+    const r=await fetch('/api/2fa/verify-setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})});
+    const d=await r.json();
+    if(d.status==='OK'){alert('✅ تم التفعيل!');location.reload();}
+    else alert('خطأ: '+(d.message||'كود غلط'));
+  }catch(e){alert('خطأ: '+e.message)}
+}
+</script>
 
 <button class="bd" style="margin-top:15px" onclick="logout()">🚪 تسجيل الخروج</button>
 </div>
