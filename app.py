@@ -1427,8 +1427,7 @@ th{color:#9ca3af;background:#0b0f19}
 <script>
 async function p2setup(){
   try{
-    const r=await fetch('/api/2fa/setup',{method:'POST'});
-    const d=await r.json();
+    const d=await api('/api/2fa/setup','POST',{});
     if(d.status==='OK'){
       document.getElementById('p2qr').src=d.qr_code;
       document.getElementById('p2sec').textContent=d.secret;
@@ -1441,8 +1440,7 @@ async function p2verify(){
   const c=document.getElementById('p2code').value.trim();
   if(c.length!==6){alert('أدخل 6 أرقام');return;}
   try{
-    const r=await fetch('/api/2fa/verify-setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})});
-    const d=await r.json();
+    const d=await api('/api/2fa/verify-setup','POST',{code:c});
     if(d.status==='OK'){alert('✅ تم التفعيل!');location.reload();}
     else alert('خطأ: '+(d.message||'كود غلط'));
   }catch(e){alert('خطأ: '+e.message)}
