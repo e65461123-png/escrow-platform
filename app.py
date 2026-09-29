@@ -2034,6 +2034,11 @@ def debug_info():
 # تسجيل مسارات 2FA (في نهاية الملف - بعد كل التعريفات)
 # ============================================================
 try:
+
+# تعريف _placeholder (مطلوب لـ 2FA)
+def _placeholder():
+    return '%s' if USE_POSTGRES else '?'
+
     if setup_2fa_routes:
         setup_2fa_routes(app, get_db, _placeholder, login_required)
         print('[2FA] تم تسجيل المسارات بنجاح')
