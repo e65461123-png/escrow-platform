@@ -70,8 +70,7 @@ def setup_routes(app, get_db, _placeholder, login_required):
         username = session.get('user')
         secret = generate_secret()
         
-        # خزنه مؤقتاً في الجلسة لحد ما يتأكد
-        session['2fa_pending_secret'] = secret
+        # مش محتاجين session - العميل هيبعت المفتاح
         
         # اعمل QR
         qr_base64 = generate_qr_base64(secret, username)
@@ -88,8 +87,9 @@ def setup_routes(app, get_db, _placeholder, login_required):
     @login_required
     def api_2fa_verify_setup():
         username = session.get('user')
-        code = request.json.get('code', '').strip()
-        secret = session.get('2fa_pending_secret')
+        data = request.json or {}
+        code = (data.get('code') or '').strip()
+        secret = (data.get('secret') or '').strip()
         
         if not secret:
             return jsonify({'status': 'ERROR', 'message': 'ابدأ الإعداد الأول'})
@@ -115,7 +115,6 @@ def setup_routes(app, get_db, _placeholder, login_required):
         except Exception as e:
             return jsonify({'status': 'ERROR', 'message': str(e)})
         
-        session.pop('2fa_pending_secret', None)
         session['2fa_verified'] = True
         
         return jsonify({
