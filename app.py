@@ -1396,6 +1396,133 @@ th{color:#9ca3af;background:#0b0f19}
 <a href="/admin/dashboard" style="display:block;text-decoration:none;margin-bottom:10px"><button class="bp">📊 لوحة التحليلية</button></a>
 <div class="fg"><input id="banT" placeholder="اسم المستخدم"><div style="display:flex;gap:6px"><button class="bd" onclick="ban()">حظر</button><button class="bs" onclick="unban()">إلغاء</button></div></div>
 <div class="fg"><input type="number" id="rId" placeholder="رقم الصفقة"><button class="bw" onclick="refund()">💸 استرداد للمشتري</button></div>
+
+<!-- ========== 2FA Section ========== -->
+<div class="card" id="twofaCard" style="margin-top:14px">
+  <div class="card-title">🔐 التحقق بخطوتين (2FA)</div>
+  <div id="twofaStatus" style="padding:10px;color:#f0ad4e;font-weight:bold">
+    ⏳ جاري التحقق...
+  </div>
+  
+  <div id="twofaSetupBox" style="display:none;margin-top:15px">
+    <div style="background:#1a1f2e;padding:15px;border-radius:10px;text-align:center">
+      <div style="color:#00d4aa;font-weight:bold;margin-bottom:10px">📱 امسح الـ QR بتطبيق Google Authenticator</div>
+      <img id="twofaQR" style="max-width:220px;background:white;padding:10px;border-radius:10px" />
+      <div style="color:#aaa;font-size:12px;margin-top:10px">
+        أو استخدم المفتاح: <code id="twofaSecret" style="color:#00d4aa"></code>
+      </div>
+    </div>
+    
+    <div class="fg" style="margin-top:15px">
+      <label>أدخل الكود من التطبيق (6 أرقام)</label>
+      <input id="twofaCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" />
+    </div>
+    
+    <button class="bp" onclick="verify2FA()" style="width:100%;padding:12px">
+      ✅ تأكيد التفعيل
+    </button>
+  </div>
+  
+  <div id="twofaActions" style="display:none;margin-top:15px">
+    <button id="twofaEnableBtn" class="bs" onclick="setup2FA()" style="width:100%;padding:12px">
+      🔓 تفعيل 2FA
+    </button>
+    <button id="twofaDisableBtn" class="bw" onclick="disable2FA()" style="width:100%;padding:12px;margin-top:10px;display:none">
+      🔒 إلغاء 2FA
+    </button>
+  </div>
+</div>
+
+<script>
+async function check2FAStatus() {
+  try {
+    const r = await fetch('/api/2fa/status');
+    const d = await r.json();
+    const statusEl = document.getElementById('twofaStatus');
+    const actionsEl = document.getElementById('twofaActions');
+    const setupEl = document.getElementById('twofaSetupBox');
+    const enableBtn = document.getElementById('twofaEnableBtn');
+    const disableBtn = document.getElementById('twofaDisableBtn');
+    
+    if (d.enabled) {
+      statusEl.innerHTML = '✅ 2FA مفعّل حالياً';
+      statusEl.style.color = '#00d4aa';
+      enableBtn.style.display = 'none';
+      disableBtn.style.display = 'block';
+    } else {
+      statusEl.innerHTML = '⚠️ 2FA غير مفعّل - حسابك أقل أماناً';
+      statusEl.style.color = '#f0ad4e';
+      enableBtn.style.display = 'block';
+      disableBtn.style.display = 'none';
+    }
+    setupEl.style.display = 'none';
+    actionsEl.style.display = 'block';
+  } catch(e) {
+    document.getElementById('twofaStatus').innerHTML = '❌ خطأ في التحميل';
+  }
+}
+
+async function setup2FA() {
+  try {
+    const r = await fetch('/api/2fa/setup', {method:'POST'});
+    const d = await r.json();
+    if (d.status === 'OK') {
+      document.getElementById('twofaQR').src = d.qr_code;
+      document.getElementById('twofaSecret').textContent = d.secret;
+      document.getElementById('twofaSetupBox').style.display = 'block';
+      document.getElementById('twofaActions').style.display = 'none';
+    } else {
+      alert('خطأ: ' + (d.message || 'فشل'));
+    }
+  } catch(e) { alert('خطأ في الاتصال'); }
+}
+
+async function verify2FA() {
+  const code = document.getElementById('twofaCode').value.trim();
+  if (code.length !== 6) { alert('أدخل 6 أرقام'); return; }
+  try {
+    const r = await fetch('/api/2fa/verify-setup', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code: code})
+    });
+    const d = await r.json();
+    if (d.status === 'OK') {
+      alert('✅ تم تفعيل 2FA بنجاح!');
+      if (d.backup_codes) {
+        alert('احفظ الأكواد الاحتياطية:\n' + d.backup_codes.join('\n'));
+      }
+      check2FAStatus();
+    } else {
+      alert('خطأ: ' + (d.message || 'كود غير صحيح'));
+    }
+  } catch(e) { alert('خطأ في الاتصال'); }
+}
+
+async function disable2FA() {
+  const code = prompt('أدخل كود 2FA الحالي لإلغاء التفعيل:');
+  if (!code) return;
+  try {
+    const r = await fetch('/api/2fa/disable', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code: code})
+    });
+    const d = await r.json();
+    if (d.status === 'OK') {
+      alert('✅ تم إلغاء 2FA');
+      check2FAStatus();
+    } else {
+      alert('خطأ: ' + (d.message || 'فشل'));
+    }
+  } catch(e) { alert('خطأ في الاتصال'); }
+}
+
+// شغل التحقق لما الصفحة تفتح
+setTimeout(check2FAStatus, 500);
+</script>
+<!-- ========== End 2FA Section ========== -->
+
 <div style="display:flex;gap:6px"><button class="bg" onclick="stats()">📊 إحصائيات</button><button class="bg" onclick="users()">👥 المستخدمون</button></div>
 <button class="bg" onclick="kycList()" style="margin-top:6px">📋 طلبات KYC</button>
 </div>
