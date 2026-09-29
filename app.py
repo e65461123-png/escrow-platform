@@ -488,7 +488,86 @@ def send_email(to, subj, html):
     <div style="max-width:500px;margin:auto;background:#fff;padding:25px;border-radius:12px;border:2px solid #0284c7">
     <h2 style="color:#0284c7;text-align:center">منصة الضمان المالي</h2><hr>
     {html}<hr><p style="color:#6b7280;font-size:11px;text-align:center">(c) EssamElkomy369</p>
-    </div></body></html>'''
+    </div>
+<!-- Dialog 2FA -->
+<div id="dialog2fa" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#0f1729;padding:25px;border-radius:16px;max-width:90%;width:380px;text-align:center;border:1px solid #374151">
+    <h3 style="color:#00d4aa;margin:0 0 10px 0">🔐 التحقق بخطوتين</h3>
+    <p style="color:#aaa;margin:0 0 20px 0;font-size:14px">افتح Google Authenticator واكتب الكود</p>
+    <input id="dlg2faCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" 
+           style="width:100%;padding:15px;background:#0b0f19;border:2px solid #00d4aa;border-radius:10px;color:#fff;text-align:center;font-size:24px;letter-spacing:8px;font-weight:bold;box-sizing:border-box" />
+    <div id="dlg2faError" style="color:#ef4444;font-size:13px;margin-top:10px;min-height:18px"></div>
+    <button id="dlg2faBtn" onclick="submit2FACode()" 
+            style="width:100%;padding:14px;margin-top:15px;background:#00d4aa;color:#000;border:none;border-radius:10px;font-size:16px;font-weight:bold;cursor:pointer">
+      ✅ تأكيد الدخول
+    </button>
+    <button onclick="cancel2FA()" 
+            style="width:100%;padding:10px;margin-top:8px;background:transparent;color:#666;border:none;font-size:13px;cursor:pointer">
+      إلغاء
+    </button>
+  </div>
+</div>
+
+<script>
+let _pending2FAUser = '';
+
+function show2FADialog(username) {
+  _pending2FAUser = username;
+  document.getElementById('dialog2fa').style.display = 'flex';
+  document.getElementById('dlg2faCode').value = '';
+  document.getElementById('dlg2faError').textContent = '';
+  setTimeout(() => document.getElementById('dlg2faCode').focus(), 100);
+}
+
+function cancel2FA() {
+  document.getElementById('dialog2fa').style.display = 'none';
+  _pending2FAUser = '';
+}
+
+async function submit2FACode() {
+  const code = document.getElementById('dlg2faCode').value.trim();
+  const errEl = document.getElementById('dlg2faError');
+  const btn = document.getElementById('dlg2faBtn');
+  
+  if (code.length !== 6) {
+    errEl.textContent = 'أدخل 6 أرقام';
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري التحقق...';
+  errEl.textContent = '';
+  
+  try {
+    const r = await fetch('/api/2fa/verify-login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: _pending2FAUser, code: code})
+    });
+    const d = await r.json();
+    
+    if (d.status === 'SUCCESS') {
+      btn.textContent = '✅ تم';
+      setTimeout(() => location.reload(), 500);
+    } else {
+      errEl.textContent = d.message || 'كود غلط';
+      btn.disabled = false;
+      btn.textContent = '✅ تأكيد الدخول';
+    }
+  } catch(e) {
+    errEl.textContent = 'خطأ في الاتصال';
+    btn.disabled = false;
+    btn.textContent = '✅ تأكيد الدخول';
+  }
+}
+
+// السماح بـ Enter
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('dlg2faCode');
+  if (inp) inp.addEventListener('keypress', e => { if (e.key === 'Enter') submit2FACode(); });
+});
+</script>
+</body></html>'''
     
     # 1. Resend (يعمل على Render)
     if RESEND_API_KEY:
@@ -1759,7 +1838,12 @@ document.getElementById('tpwd').classList.toggle('hide',t!=='pwd');
 document.getElementById('tpin').classList.toggle('hide',t!=='pin');}
 function ol(){var p=document.getElementById('p').value;if(!p)return;
 fetch('/api/owner/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})})
-.then(r=>r.json()).then(d=>{if(d.status==='SUCCESS'){document.getElementById('loginView').classList.add('hide');document.getElementById('panelView').classList.remove('hide');}
+.then(r=>r.json()).then(d=>{if(d.status==='NEED_2FA'){
+        show2FADialog(d.username||document.getElementById('u').value.trim());
+      } else if(d.status==='SUCCESS'){
+        document.getElementById('loginView').classList.add('hide');
+        document.getElementById('panelView').classList.remove('hide');
+      }
 else document.getElementById('m1').innerText=d.message;});}
 function cp(){var o=document.getElementById('op').value,n=document.getElementById('np').value,n2=document.getElementById('np2').value;
 if(!o||!n)return document.getElementById('m2').innerText='املأ الحقول';
