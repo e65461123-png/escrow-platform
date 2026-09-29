@@ -7,3 +7,4 @@ qrcode[pil]>=7.4.2
 pillow>=10.0.0
 requests>=2.31.0
 python-dotenv>=1.0.0
+pg8000>=1.30.0
