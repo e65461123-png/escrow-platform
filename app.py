@@ -94,12 +94,8 @@ def get_db():
 
 def init_db():
 
-# تسجيل مسارات 2FA
-try:
-    if setup_2fa_routes:
-        setup_2fa_routes(app, get_db, _placeholder, login_required)
-except Exception as _e:
-    print(f'[2FA] خطأ: {_e}')
+
+
 
     c = get_db(); cur = c.cursor()
     try:
@@ -163,6 +159,14 @@ except Exception as _e:
     except Exception as e:
         cur.execute('ROLLBACK'); print(f'[INIT] {e}')
     finally: c.close()
+
+
+# تسجيل مسارات 2FA (بعد تعريف الدالة)
+try:
+    if setup_2fa_routes:
+        setup_2fa_routes(app, get_db, _placeholder, login_required)
+except Exception as _e:
+    print(f'[2FA] خطأ: {_e}')
 
 init_db()
 
