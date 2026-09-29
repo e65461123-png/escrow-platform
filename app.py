@@ -437,21 +437,25 @@ def _before():
             '/api/register', '/api/me', '/static/', '/favicon',
         )
         if not request.path.startswith(allowed):
-            try:
-                _c = get_db()
-                _p = _placeholder()
-                _u = _c.execute(
-                    f"SELECT totp_enabled FROM users WHERE username={_p}",
-                    (session.get('user'),)
-                ).fetchone()
-                _c.close()
-                if _u and _u['totp_enabled']:
-                    return jsonify({
-                        'status': 'NEED_2FA',
-                        'message': 'أكمل التحقق بـ 2FA'
-                    }), 401
-            except:
+            # اسمح بالصفحات الرئيسية (HTML)
+            if request.path == '/' or not request.path.startswith('/api/'):
                 pass
+            else:
+                try:
+                    _c = get_db()
+                    _p = _placeholder()
+                    _u = _c.execute(
+                        f"SELECT totp_enabled FROM users WHERE username={_p}",
+                        (session.get('user'),)
+                    ).fetchone()
+                    _c.close()
+                    if _u and _u['totp_enabled']:
+                        return jsonify({
+                            'status': 'NEED_2FA',
+                            'message': 'أكمل التحقق بـ 2FA'
+                        }), 401
+                except:
+                    pass
     
     if request.method == 'POST':
         if not request.path.startswith('/api/2fa/'):
