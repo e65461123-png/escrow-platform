@@ -587,6 +587,18 @@ def api_login():
         if r['status'] == 'BANNED':
             log_event('BANNED_LOGIN', u)
             return jsonify({'status':'ERROR','message':'محظور'})
+        # فحص 2FA قبل إنشاء الجلسة
+        try:
+            _c2 = get_db()
+            _p2 = _placeholder()
+            _u2 = _c2.execute(f"SELECT totp_enabled FROM users WHERE username={_p2}", (u,)).fetchone()
+            _c2.close()
+            if _u2 and _u2['totp_enabled']:
+                log_event('NEED_2FA', u)
+                return jsonify({'status': 'NEED_2FA', 'username': u, 'message': 'أدخل كود 2FA'})
+        except Exception as _e2:
+            print(f'[2FA] {_e2}')
+
         session.clear(); session.permanent = True
         session['user'] = u
         session['user_id'] = r['id']
