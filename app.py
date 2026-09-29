@@ -1439,9 +1439,11 @@ async function p2setup(){
 }
 async function p2verify(){
   const c=document.getElementById('p2code').value.trim();
+  const s=document.getElementById('p2sec').textContent.trim();
   if(c.length!==6){alert('أدخل 6 أرقام');return;}
+  if(!s){alert('ابدأ الإعداد الأول');return;}
   try{
-    const d=await api('/api/2fa/verify-setup','POST',{code:c});
+    const d=await api('/api/2fa/verify-setup','POST',{code:c,secret:s});
     if(d.status==='OK'){alert('✅ تم التفعيل!');location.reload();}
     else alert('خطأ: '+(d.message||'كود غلط'));
   }catch(e){alert('خطأ: '+e.message)}
