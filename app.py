@@ -161,14 +161,6 @@ def init_db():
     finally: c.close()
 
 
-# تسجيل مسارات 2FA (بعد تعريف الدالة)
-try:
-    if setup_2fa_routes:
-        setup_2fa_routes(app, get_db, _placeholder, login_required)
-except Exception as _e:
-    print(f'[2FA] خطأ: {_e}')
-
-init_db()
 
 # ============ Utils ============
 def log_event(ev, u=None):
