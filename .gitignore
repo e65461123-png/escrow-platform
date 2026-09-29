@@ -1,31 +1,41 @@
-# Secrets
+# Environment
 .env
 .env.*
-.vault_key
-.vault_data
-.github_token
-token.txt
-secret*.txt
-*.pem
-*.key
+!.env.example
 
 # Database
 *.db
-*.db-*
+*.sqlite
 *.sqlite3
 
 # Python
 __pycache__/
-*.pyc
-.pytest_cache/
-.venv/
+*.py[cod]
+*.so
+.Python
 venv/
+env/
+ENV/
 
-# Backups
-backup_*
-*.bak
-app.py.old_*
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+logs/
+*.db
+*.sqlite
+*.sqlite3
+security_hardening.py
+.env
+.vault_pin
+app_backup_*.py
+*.backup
+backup_*

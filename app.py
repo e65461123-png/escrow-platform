@@ -7,6 +7,12 @@ from pg_adapter import PGConnection
 from security_hardening import ThreatDetector, EncryptedVault, scan_directory, scan_file
 from flask import Flask, jsonify, request, render_template_string, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
+# 2FA
+try:
+    from two_factor import setup_routes as setup_2fa_routes
+except ImportError:
+    setup_2fa_routes = None
+
 
 # ============ Config ============
 def _load_env():
@@ -57,6 +63,9 @@ GMAIL_PASS = os.environ.get('GMAIL_PASS', '')
 TG_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 RESEND_FROM = os.environ.get('RESEND_FROM', 'onboarding@resend.dev')
+AI_API_KEY = os.environ.get('AI_API_KEY', '')
+AI_PROVIDER = os.environ.get('AI_PROVIDER', 'groq').lower()
+AI_MODEL = os.environ.get('AI_MODEL', 'llama-3.3-70b-versatile')
 TG_CHAT = os.environ.get('TELEGRAM_CHAT_ID', '')
 
 MAX_ESCROW = 10000.0
@@ -84,6 +93,14 @@ def get_db():
     return c
 
 def init_db():
+
+# تسجيل مسارات 2FA
+try:
+    if setup_2fa_routes:
+        setup_2fa_routes(app, get_db, _placeholder, login_required)
+except Exception as _e:
+    print(f'[2FA] خطأ: {_e}')
+
     c = get_db(); cur = c.cursor()
     try:
         cur.execute('BEGIN IMMEDIATE')
@@ -285,6 +302,85 @@ def add_points(username, points):
         c.close()
     except Exception as e:
         print(f'[POINTS] {e}')
+
+
+
+# ============================================================
+#                    AI Agent (Groq / OpenAI)
+# ============================================================
+def ai_call(messages, max_tokens=500):
+    """استدعاء API للذكاء الاصطناعي (Groq أو OpenAI)"""
+    if not AI_API_KEY:
+        return None
+    
+    import urllib.request as _ur
+    import json as _j
+    
+    if AI_PROVIDER == 'groq':
+        url = 'https://api.groq.com/openai/v1/chat/completions'
+    else:
+        url = 'https://api.openai.com/v1/chat/completions'
+    
+    try:
+        payload = _j.dumps({
+            'model': AI_MODEL,
+            'messages': messages,
+            'max_tokens': max_tokens,
+            'temperature': 0.7
+        }).encode()
+        
+        req = _ur.Request(url, data=payload, headers={
+            'Authorization': f'Bearer {AI_API_KEY}',
+            'Content-Type': 'application/json'
+        })
+        
+        with _ur.urlopen(req, timeout=20) as resp:
+            r = _j.loads(resp.read())
+            return r['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        print(f'[AI-ERR] {e}')
+        return None
+
+
+def ai_build_context(username):
+    """بناء سياق للمستخدم ليعرفه AI"""
+    try:
+        c = get_db()
+        p = '%s' if USE_POSTGRES else '?'
+        u = c.execute(f"SELECT username, balance, role, kyc_status, trust_score FROM users WHERE username={p}", (username,)).fetchone()
+        if not u:
+            c.close()
+            return 'المستخدم غير مسجل.'
+        # صفقاته
+        escrows = c.execute(f"SELECT id, amount, status, seller, buyer FROM escrows WHERE seller={p} OR buyer={p} ORDER BY id DESC LIMIT 5", (username, username)).fetchall()
+        escrows_txt = '\n'.join([f"  - صفقة #{e['id']}: {e['amount']}$ ({e['status']})" for e in escrows]) or '  لا توجد صفقات.'
+        # نزاعات
+        disputes = c.execute("SELECT COUNT(*) as n FROM escrows WHERE status='DISPUTED'").fetchone()['n']
+        # عدد المستخدمين
+        users_count = c.execute("SELECT COUNT(*) as n FROM users").fetchone()['n']
+        c.close()
+        
+        return f"""معلومات المستخدم الحالي:
+- الاسم: {u['username']}
+- الرصيد: {u['balance']:.2f}$
+- الدور: {u['role']}
+- حالة KYC: {u['kyc_status']}
+- نقاط الثقة: {u['trust_score']}/1000
+
+آخر صفقاته:
+{escrows_txt}
+
+معلومات عامة:
+- عدد المستخدمين: {users_count}
+- النزاعات المفتوحة: {disputes}
+- الحد الأقصى للصفقة: 10,000$
+- الحد اليومي: 50,000$
+- عمولة المنصة: 2%
+- التحرير التلقائي: 7 أيام
+- التحرير: بواسطة المشتري فقط
+"""
+    except Exception as e:
+        return f'خطأ في السياق: {e}'
 
 def csrf_ok():
     if request.method in ('GET', 'HEAD', 'OPTIONS'): return True
@@ -980,113 +1076,6 @@ def api_save_email():
     return jsonify({'status':'SUCCESS','message':'تم الحفظ'})
 
 # ============ AI ============
-@app.route('/api/ai/engine', methods=['POST'])
-def api_ai():
-    msg = ((request.get_json(silent=True) or {}).get('message') or '').lower().strip()
-    u = session.get('user', 'زائر')
-    c = get_db()
-    if any(w in msg for w in ['نزاع','مشكلة','نصب']):
-        d = c.execute("SELECT COUNT(*) as n FROM escrows WHERE status='DISPUTED'").fetchone()['n']
-        reply = f'🚨 النزاعات: {d}'
-    elif 'رصيد' in msg:
-        if session.get('user_id'):
-            r = c.execute("SELECT balance FROM users WHERE id=?", (session['user_id'],)).fetchone()
-            reply = f'💰 رصيدك: {r["balance"]:.2f}$'
-        else: reply = 'سجل الدخول'
-    elif 'ثقة' in msg:
-        reply = f'⭐ نقاطك: {compute_trust(u)}/1000' if session.get('user') else 'سجل الدخول'
-    elif 'مساعدة' in msg:
-        reply = '🤖 اكتب: رصيدي / ثقتى / النزاعات'
-    else:
-        n = c.execute("SELECT COUNT(*) as n FROM escrows WHERE status='LOCKED_SECURE'").fetchone()['n']
-        reply = f'أهلاً {u}. صفقات نشطة: {n}.'
-    c.close()
-    return jsonify({'reply': reply})
-
-
-# ============ PDF EXPORT ============
-def _pdf_export():
-    try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib import colors
-        from reportlab.lib.styles import ParagraphStyle
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib.units import cm
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        import arabic_reshaper
-        from bidi.algorithm import get_display
-
-        FONT = os.path.join(os.path.dirname(__file__), 'fonts', 'Amiri-Regular.ttf')
-        try:
-            pdfmetrics.registerFont(TTFont('Amiri', FONT))
-            FN = 'Amiri'
-        except: FN = 'Helvetica'
-
-        def ar(t):
-            try: return get_display(arabic_reshaper.reshape(str(t)))
-            except: return str(t)
-
-        c = get_db()
-        user = c.execute("SELECT * FROM users WHERE id=?", (session['user_id'],)).fetchone()
-        txs = c.execute("SELECT * FROM transactions WHERE username=? ORDER BY id DESC LIMIT 50", (session['user'],)).fetchall()
-        c.close()
-
-        buf = _io.BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
-        story = []
-        ts = ParagraphStyle('T', fontSize=22, textColor=colors.HexColor('#0284c7'), alignment=1, fontName=FN, spaceAfter=6)
-        ss = ParagraphStyle('S', fontSize=11, textColor=colors.HexColor('#6b7280'), alignment=1, fontName=FN, spaceAfter=20)
-        h2 = ParagraphStyle('H2', fontSize=14, textColor=colors.HexColor('#10b981'), fontName=FN, spaceAfter=10)
-        ft = ParagraphStyle('F', fontSize=8, textColor=colors.grey, alignment=1, fontName=FN)
-
-        story.append(Paragraph(ar('منصة الضمان المالي الآمن'), ts))
-        story.append(Paragraph('Enterprise Escrow Platform', ss))
-        story.append(Paragraph(ar('معلومات الحساب'), h2))
-        info = [
-            [ar('البيان'), ar('القيمة')],
-            [ar('اسم المستخدم'), str(user['username'])],
-            [ar('الرصيد'), f"{user['balance']:.2f} USD"],
-            [ar('KYC'), str(user['kyc_status'])],
-            [ar('نقاط الثقة'), str(user['trust_score'] or 100)],
-            [ar('كود الإحالة'), str(user['referral_code'] or '-')],
-            [ar('تاريخ التسجيل'), str(user['created_at'])],
-        ]
-        t1 = Table(info, colWidths=[6*cm, 10*cm])
-        t1.setStyle(TableStyle([
-            ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#0284c7')),
-            ('TEXTCOLOR',(0,0),(-1,0),colors.white),
-            ('BACKGROUND',(0,1),(-1,-1),colors.HexColor('#f3f4f6')),
-            ('ALIGN',(0,0),(-1,-1),'RIGHT'),
-            ('FONT',(0,0),(-1,-1),FN,10),
-            ('GRID',(0,0),(-1,-1),0.5,colors.HexColor('#d1d5db')),
-            ('PADDING',(0,0),(-1,-1),8),
-        ]))
-        story.append(t1); story.append(Spacer(1, 20))
-        story.append(Paragraph(ar(f'سجل المعاملات ({len(txs)})'), h2))
-        data = [[ar('#'),ar('النوع'),ar('المبلغ'),ar('ملاحظة'),ar('التاريخ')]]
-        for t in txs:
-            data.append([str(t['id']), str(t['type'])[:18], f"{t['amount']}$", ar((t['note'] or '')[:25]), str(t['timestamp'])[:16]])
-        if len(data) == 1: data.append(['-',ar('لا معاملات'),'-','-','-'])
-        t2 = Table(data, colWidths=[1*cm,4.5*cm,2.5*cm,4.5*cm,3.5*cm])
-        t2.setStyle(TableStyle([
-            ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#10b981')),
-            ('TEXTCOLOR',(0,0),(-1,0),colors.white),
-            ('BACKGROUND',(0,1),(-1,-1),colors.HexColor('#f9fafb')),
-            ('ALIGN',(0,0),(-1,-1),'CENTER'),
-            ('FONT',(0,0),(-1,-1),FN,8),
-            ('GRID',(0,0),(-1,-1),0.3,colors.HexColor('#e5e7eb')),
-            ('PADDING',(0,0),(-1,-1),5),
-        ]))
-        story.append(t2); story.append(Spacer(1, 20))
-        story.append(Paragraph(ar('تم الإنشاء تلقائياً - منصة الضمان المالي'), ft))
-        story.append(Paragraph(f'(c) EssamElkomy369 - {session["user"]}', ft))
-        doc.build(story)
-        buf.seek(0)
-        return send_file(buf, mimetype='application/pdf', as_attachment=True,
-                        download_name=f'statement_{session["user"]}.pdf')
-    except Exception as e:
-        return f"<h1 style='color:#f87171;text-align:center;font-family:Tahoma;padding:50px'>خطأ: {e}</h1>"
 
 @app.route('/api/export/pdf')
 @login_required

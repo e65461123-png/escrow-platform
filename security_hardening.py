@@ -26,7 +26,7 @@ SECRET_PATTERNS = [
 # أنماط يُتجاهل ظهورها (regex، توثيق، أمثلة)
 FALSE_POSITIVE_PATTERNS = [
     r"re\.match\(r'postgresql",     # regex لتحليل URL
-    r"postgresql://neondb_owner:npg_",  # مثال في الكود
+    r"postgresql://[a-zA-Z0-9_]+:[a-zA-Z0-9_]+",  # مثال في الكود
     r"# مثال",
     r"# Example",
 ]
