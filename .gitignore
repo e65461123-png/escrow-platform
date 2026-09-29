@@ -39,3 +39,5 @@ security_hardening.py
 app_backup_*.py
 *.backup
 backup_*
+fix_2fa.py
+*.bak*
