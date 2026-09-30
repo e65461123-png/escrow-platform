@@ -1815,11 +1815,7 @@ fetch('/api/owner/login',{method:'POST',headers:{'Content-Type':'application/jso
       const _u=d.username||document.getElementById('u').value.trim();
       const _c=prompt('🔐 أدخل كود 2FA من Google Authenticator:');
       if(_c&&_c.trim().length===6){
-        fetch('/api/2fa/verify-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:_u,code:_c.trim()})})
-        .then(r=>r.json()).then(v=>{
-          if(v.status==='SUCCESS'){location.reload();}
-          else{alert('❌ '+(v.message||'كود غلط'));}
-        }).catch(e=>alert('خطأ: '+e));
+  /* removed old 2FA block 2 */
       }
     }else if(d.status==='SUCCESS'){document.getElementById('loginView').classList.add('hide');document.getElementById('panelView').classList.remove('hide');}
 else document.getElementById('m1').innerText=d.message;});}
