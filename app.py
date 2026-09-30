@@ -1759,7 +1759,17 @@ document.getElementById('tpwd').classList.toggle('hide',t!=='pwd');
 document.getElementById('tpin').classList.toggle('hide',t!=='pin');}
 function ol(){var p=document.getElementById('p').value;if(!p)return;
 fetch('/api/owner/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})})
-.then(r=>r.json()).then(d=>{if(d.status==='SUCCESS'){document.getElementById('loginView').classList.add('hide');document.getElementById('panelView').classList.remove('hide');}
+.then(r=>r.json()).then(d=>{if(d.status==='NEED_2FA'){
+      const _u=d.username||document.getElementById('u').value.trim();
+      const _c=prompt('🔐 أدخل كود 2FA من Google Authenticator:');
+      if(_c&&_c.trim().length===6){
+        fetch('/api/2fa/verify-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:_u,code:_c.trim()})})
+        .then(r=>r.json()).then(v=>{
+          if(v.status==='SUCCESS'){location.reload();}
+          else{alert('❌ '+(v.message||'كود غلط'));}
+        }).catch(e=>alert('خطأ: '+e));
+      }
+    }else if(d.status==='SUCCESS'){document.getElementById('loginView').classList.add('hide');document.getElementById('panelView').classList.remove('hide');}
 else document.getElementById('m1').innerText=d.message;});}
 function cp(){var o=document.getElementById('op').value,n=document.getElementById('np').value,n2=document.getElementById('np2').value;
 if(!o||!n)return document.getElementById('m2').innerText='املأ الحقول';
