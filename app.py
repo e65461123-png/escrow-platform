@@ -1539,16 +1539,57 @@ function reg(){const u=document.getElementById('u').value.trim(),p=document.getE
 if(!u||!p)return toast('املأ الحقول','e');
 api('/api/register','POST',{username:u,password:p}).then(d=>toast(d.message,d.status==='SUCCESS'?'s':'e'));}
 
-function login(){const u=document.getElementById('u').value.trim(),p=document.getElementById('p').value;
-api('/api/login','POST',{username:u,password:p}).then(d=>{
-if(d.status!=='SUCCESS')return toast(d.message,'e');
-me=u;role=d.role;csrf=d.csrf_token||'';
-document.getElementById('who').innerText=u;
-document.getElementById('bal').innerText=d.balance.toFixed(2)+' $';
-document.getElementById('authView').classList.add('hide');
-document.getElementById('mainView').classList.remove('hide');
-if(d.role==='OWNER')document.getElementById('t_a').classList.remove('hide');
-toast('مرحباً '+u,'s');loadEscrows(true);loadNotifs();});}
+function login(){
+  const u=document.getElementById('u').value.trim();
+  const p=document.getElementById('p').value;
+  if(!u||!p) return toast('بيانات ناقصة','e');
+  
+  fetch('/api/login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRF-Token':csrf||''},
+    body:JSON.stringify({username:u,password:p})
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.status==='NEED_2FA'){
+      const code = prompt('🔐 أدخل كود 2FA من Google Authenticator:');
+      if(!code || code.trim().length !== 6){
+        toast('أدخل 6 أرقام','e');
+        return;
+      }
+      fetch('/api/2fa/verify-login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username:u, code:code.trim()})
+      })
+      .then(r=>r.json())
+      .then(v=>{
+        if(v.status==='SUCCESS'){
+          toast('✅ تم الدخول','s');
+          location.reload();
+        } else {
+          toast(v.message || 'كود غلط','e');
+        }
+      })
+      .catch(e=>toast('خطأ: '+e,'e'));
+    }
+    else if(d.status==='SUCCESS'){
+      me = u;
+      role = d.role;
+      csrf = d.csrf_token || '';
+      document.getElementById('loginView').classList.add('hide');
+      document.getElementById('panelView').classList.remove('hide');
+      if(d.role==='OWNER') document.getElementById('t_a').classList.remove('hide');
+      toast('أهلاً '+u,'s');
+      loadEscrows(true);
+      loadNotifs();
+    }
+    else {
+      document.getElementById('m1').innerText = d.message || 'خطأ';
+    }
+  })
+  .catch(e=>toast('خطأ: '+e,'e'));
+}
 
 function logout(){api('/api/logout','POST',{}).then(()=>location.reload());}
 
