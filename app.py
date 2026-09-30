@@ -1565,8 +1565,19 @@ function login(){
       .then(r=>r.json())
       .then(v=>{
         if(v.status==='SUCCESS'){
-          toast('✅ تم الدخول','s');
-          location.reload();
+          me = u;
+          role = v.role;
+          csrf = v.csrf_token || '';
+          try{document.getElementById('who').innerText = u;}catch(e){}
+          try{document.getElementById('bal').innerText = (v.balance||0).toFixed(2) + ' $';}catch(e){}
+          try{document.getElementById('loginView').classList.add('hide');}catch(e){}
+          try{document.getElementById('panelView').classList.remove('hide');}catch(e){}
+          try{document.getElementById('authView').classList.add('hide');}catch(e){}
+          try{document.getElementById('mainView').classList.remove('hide');}catch(e){}
+          if(v.role==='OWNER'){try{document.getElementById('t_a').classList.remove('hide');}catch(e){}}
+          toast('✅ أهلاً '+u,'s');
+          try{loadEscrows(true);}catch(e){}
+          try{loadNotifs();}catch(e){}
         } else {
           toast(v.message || 'كود غلط','e');
         }
