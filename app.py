@@ -1453,7 +1453,9 @@ th{color:#9ca3af;background:#0b0f19}
   <div style="padding:12px;margin:10px 0;background:#2a1f0a;border-radius:8px;color:#f0ad4e;font-size:13px">
     ⚠️ ننصح بتفعيل 2FA لحماية حسابك
   </div>
-  <button class="bs" id="b2faSetup" style="width:100%;padding:12px" onclick="p2setup()">🔓 تفعيل 2FA</button>
+  <div id="p2status" style="padding:12px;margin:10px 0;background:#2a1f0a;border-radius:8px;color:#f0ad4e;font-size:13px">⏳ جاري التحقق من الحالة...</div>
+  <button class="bs" id="b2faSetup" style="width:100%;padding:12px;display:none" onclick="p2setup()">🔓 تفعيل 2FA</button>
+  <button class="bw" id="b2faDisable" style="width:100%;padding:12px;margin-top:8px;display:none" onclick="p2disable()">🔒 إلغاء 2FA</button>
   <div id="p2box" style="display:none;margin-top:15px">
     <div style="background:#1a1f2e;padding:15px;border-radius:10px;text-align:center">
       <div style="color:#00d4aa;font-weight:bold;margin-bottom:10px">📱 امسح الـ QR</div>
@@ -1917,6 +1919,12 @@ document.getElementById('s2').innerText=d.commission.toFixed(2)+'$';
 document.getElementById('s3').innerText=d.locked.toFixed(2)+'$';
 document.getElementById('s4').innerText=d.released.toFixed(2)+'$';
 document.getElementById('s5').innerText=d.users;});}
+
+// فحص حالة 2FA عند التحميل
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(p2checkStatus, 500);
+});
+setInterval(p2checkStatus, 10000);
 </script></body></html>'''
 
 
