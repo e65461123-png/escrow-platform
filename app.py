@@ -621,7 +621,7 @@ def api_logout():
 @login_required
 def api_me():
     c = get_db()
-    r = c.execute("SELECT username, balance, role, kyc_status, referral_code, trust_score, email FROM users WHERE id=?",
+    r = c.execute("SELECT username, balance, role, kyc_status, referral_code, trust_score, email, totp_enabled FROM users WHERE id=?",
                  (session['user_id'],)).fetchone()
     c.close()
     return jsonify({'status':'SUCCESS','user':dict(r)})
@@ -1492,6 +1492,37 @@ async function p2disable(){
 }
 async function p2checkStatus(){
   var s = document.getElementById('p2status');
+  var eb = document.getElementById('b2faSetup');
+  var db = document.getElementById('b2faDisable');
+  if (!s || !eb || !db) return;
+  
+  // نستخدم /api/me بدل /api/2fa/status (أضمن)
+  try {
+    var r = await fetch('/api/me', {credentials:'same-origin'});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    var d = await r.json();
+    if(d.status === 'SUCCESS' && d.user){
+      var enabled = d.user.totp_enabled === 1 || d.user.totp_enabled === true;
+      if(enabled){
+        s.innerHTML = '✅ <b>2FA مفعّل حالياً</b> - حسابك محمي';
+        s.style.background = '#0a2a1a';
+        s.style.color = '#00d4aa';
+        eb.style.display = 'none';
+        db.style.display = 'block';
+      } else {
+        s.innerHTML = '⚠️ <b>2FA غير مفعّل</b> - ننصح بتفعيله';
+        s.style.background = '#2a1f0a';
+        s.style.color = '#f0ad4e';
+        eb.style.display = 'block';
+        db.style.display = 'none';
+      }
+      return;
+    }
+  } catch(e) { console.log('me check:', e); }
+  
+  // fallback للطريقة القديمة
+  try {
+    var r2 = await fetch('/api/2fa/status', {credentials:'same-origin'});
   var eb = document.getElementById('b2faSetup');
   var db = document.getElementById('b2faDisable');
   if (!s || !eb || !db) return;
