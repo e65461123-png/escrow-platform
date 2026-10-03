@@ -1478,7 +1478,40 @@ async function p2setup(){
     } else alert('خطأ: '+(d.message||'فشل'));
   }catch(e){alert('خطأ: '+e.message)}
 }
-async function p2verify(){
+async function p2disable(){
+  const c=prompt('🔒 أدخل كود 2FA الحالي لإلغاء التفعيل:');
+  if(!c||c.trim().length!==6){alert('أدخل 6 أرقام');return;}
+  try{
+    const r=await fetch('/api/2fa/disable',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c.trim()})});
+    const d=await r.json();
+    if(d.status==='OK'){alert('✅ تم إلغاء 2FA');location.reload();}
+    else alert('❌ '+(d.message||'كود غلط'));
+  }catch(e){alert('خطأ: '+e.message);}
+}
+async function p2checkStatus(){
+  try{
+    const r=await fetch('/api/2fa/status');
+    const d=await r.json();
+    const s=document.getElementById('p2status');
+    const eb=document.getElementById('b2faSetup');
+    const db=document.getElementById('b2faDisable');
+    if(!s||!eb||!db)return;
+    if(d.enabled){
+      s.innerHTML='✅ <b>2FA مفعّل حالياً</b> - حسابك محمي';
+      s.style.background='#0a2a1a';
+      s.style.color='#00d4aa';
+      eb.style.display='none';
+      db.style.display='block';
+    }else{
+      s.innerHTML='⚠️ <b>2FA غير مفعّل</b> - ننصح بتفعيله';
+      s.style.background='#2a1f0a';
+      s.style.color='#f0ad4e';
+      eb.style.display='block';
+      db.style.display='none';
+    }
+  }catch(e){console.log('status check:',e);}
+}
+async function p2setup(){
   const c=document.getElementById('p2code').value.trim();
   const s=document.getElementById('p2sec').textContent.trim();
   if(c.length!==6){alert('أدخل 6 أرقام');return;}
