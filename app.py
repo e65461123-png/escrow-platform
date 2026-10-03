@@ -1491,28 +1491,55 @@ async function p2disable(){
   }catch(e){alert('خطأ: '+e.message);}
 }
 async function p2checkStatus(){
-  try{
-    const r=await fetch('/api/2fa/status');
-    const d=await r.json();
-    const s=document.getElementById('p2status');
-    const eb=document.getElementById('b2faSetup');
-    const db=document.getElementById('b2faDisable');
-    if(!s||!eb||!db)return;
-    if(d.enabled){
-      s.innerHTML='✅ <b>2FA مفعّل حالياً</b> - حسابك محمي';
-      s.style.background='#0a2a1a';
-      s.style.color='#00d4aa';
-      eb.style.display='none';
-      db.style.display='block';
-    }else{
-      s.innerHTML='⚠️ <b>2FA غير مفعّل</b> - ننصح بتفعيله';
-      s.style.background='#2a1f0a';
-      s.style.color='#f0ad4e';
-      eb.style.display='block';
-      db.style.display='none';
+  var s = document.getElementById('p2status');
+  var eb = document.getElementById('b2faSetup');
+  var db = document.getElementById('b2faDisable');
+  if (!s || !eb || !db) return;
+  
+  try {
+    var r = await fetch('/api/2fa/status', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: {'Accept': 'application/json'}
+    });
+    
+    var text = await r.text();
+    var d;
+    try { d = JSON.parse(text); } catch(e) {
+      s.innerHTML = '⚠️ خطأ في التحقق';
+      s.style.background = '#2a0a0a';
+      s.style.color = '#ef4444';
+      eb.style.display = 'block';
+      return;
     }
-  }catch(e){console.log('status check:',e);}
+    
+    if (d.enabled) {
+      s.innerHTML = '✅ <b>2FA مفعّل حالياً</b> - حسابك محمي';
+      s.style.background = '#0a2a1a';
+      s.style.color = '#00d4aa';
+      eb.style.display = 'none';
+      db.style.display = 'block';
+    } else if (d.status === 'ERROR') {
+      // مش مسجل دخول - اخفي القسم
+      s.innerHTML = '⚠️ سجل دخولك أولاً لعرض الحالة';
+      s.style.background = '#2a1f0a';
+      s.style.color = '#f0ad4e';
+      eb.style.display = 'none';
+      db.style.display = 'none';
+    } else {
+      s.innerHTML = '⚠️ <b>2FA غير مفعّل</b> - ننصح بتفعيله';
+      s.style.background = '#2a1f0a';
+      s.style.color = '#f0ad4e';
+      eb.style.display = 'block';
+      db.style.display = 'none';
+    }
+  } catch(e) {
+    s.innerHTML = '⚠️ خطأ في الاتصال';
+    s.style.background = '#2a0a0a';
+    s.style.color = '#ef4444';
+  }
 }
+
 async function p2setup(){
   const c=document.getElementById('p2code').value.trim();
   const s=document.getElementById('p2sec').textContent.trim();
