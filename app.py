@@ -1,3 +1,4 @@
+from security_config import init_security, limiter
 # -*- coding: utf-8 -*-
 """منصة الضمان المالي الآمن - Enterprise Escrow Platform"""
 import os, re, threading, time, secrets, sqlite3, csv, io as _io
@@ -27,6 +28,7 @@ def _load_env():
 _load_env()
 
 app = Flask(__name__)
+init_security(app)
 IS_PRODUCTION = bool(os.environ.get('RENDER')) or os.environ.get('FLASK_ENV') == 'production'
 
 _SK = os.environ.get('SECRET_KEY')
