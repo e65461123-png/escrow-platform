@@ -12,3 +12,4 @@ Flask-Migrate>=4.0.5
 Flask-WTF>=1.2.1
 fpdf2>=2.7.8
 groq>=0.4.0
+pg8000>=1.30.0
