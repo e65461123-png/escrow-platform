@@ -2,62 +2,73 @@ import os
 import uuid
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity
 )
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(32).hex())
 
-# إعدادات قاعدة البيانات والأمان
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///escrow.db')
+# ==========================================
+# 1. إعدادات قاعدة البيانات (Database Setup)
+# ==========================================
+# الحصول على رابط قاعدة البيانات من متغيرات البيئة في Render
+database_url = os.environ.get('DATABASE_URL')
+
+# إصلاح مهم جداً: SQLAlchemy يحتاج إلى تحديد برنامج التشغيل psycopg3 بشكل صريح
+if database_url and database_url.startswith('postgresql://'):
+    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', os.urandom(32).hex())
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
 # ==========================================
-# نماذج قاعدة البيانات (Database Models)
+# 2. تعريف الجداول (Database Models)
 # ==========================================
 class User(db.Model):
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    wallet = db.relationship('Wallet', backref='user', uselist=False, cascade="all, delete-orphan")
+    wallet = db.relationship('Wallet', backref='user', uselist=False)
 
 class Wallet(db.Model):
+    __tablename__ = 'wallets'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     balance_usd = db.Column(db.Float, default=0.0)
     wallet_address = db.Column(db.String(100), unique=True, nullable=False)
 
-class EscrowTransaction(db.Model):
+class Escrow(db.Model):
+    __tablename__ = 'escrows'
     id = db.Column(db.String(100), primary_key=True)
     buyer_email = db.Column(db.String(120), nullable=False)
     seller_email = db.Column(db.String(120), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(20), default="LOCKED")
+    status = db.Column(db.String(20), default="LOCKED") # LOCKED, RELEASED, CANCELLED
 
-# إنشاء الجداول تلقائياً عند التشغيل
+# إنشاء الجداول تلقائياً عند بدء التطبيق (لأول مرة فقط)
 with app.app_context():
     db.create_all()
 
 # ==========================================
-# المسار الرئيسي
+# 3. المسارات (Routes)
 # ==========================================
+
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({
         "status": "online",
         "system": "Secure Enterprise Escrow Platform",
-        "database": "Persistent Database Active",
-        "security": "JWT Protected"
+        "security": "Encrypted & Protected"
     }), 200
 
-# ==========================================
-# مصادقة المستخدمين (Auth)
-# ==========================================
+# --- المصادقة (Authentication) ---
+
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     try:
@@ -66,20 +77,24 @@ def register():
         password = data.get('password')
 
         if not email or not password:
-            return jsonify({"status": "error", "message": "Email and password required"}), 400
+            return jsonify({"status": "error", "message": "Email and password are required"}), 400
 
+        # التحقق من وجود المستخدم مسبقاً
         if User.query.filter_by(email=email).first():
             return jsonify({"status": "error", "message": "User already exists"}), 400
 
+        # تشفير كلمة المرور
         hashed_password = generate_password_hash(password)
-        new_user = User(email=email, password_hash=hashed_password)
         
+        # إنشاء المستخدم
+        new_user = User(email=email, password_hash=hashed_password)
         db.session.add(new_user)
-        db.session.commit()
+        db.session.flush() # للحصول على user.id قبل الـ commit
 
+        # إنشاء المحفظة للمستخدم
         new_wallet = Wallet(
             user_id=new_user.id,
-            balance_usd=100.0,  # رصيد تجريبي افتراضي للبدء
+            balance_usd=0.0,
             wallet_address=f"0x{uuid.uuid4().hex}"
         )
         db.session.add(new_wallet)
@@ -87,12 +102,13 @@ def register():
 
         return jsonify({
             "status": "success",
-            "message": "User registered successfully",
+            "message": "User registered securely",
             "wallet_address": new_wallet.wallet_address
         }), 201
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -105,50 +121,56 @@ def login():
         if not user or not check_password_hash(user.password_hash, password):
             return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
+        # إنشاء التوكن (JWT) - هذا هو المفتاح للوصول للمسارات المحمية
         access_token = create_access_token(identity=email)
-        wallet = Wallet.query.filter_by(user_id=user.id).first()
 
         return jsonify({
             "status": "success",
+            "message": "Login successful",
             "access_token": access_token,
             "wallet": {
-                "balance_usd": wallet.balance_usd,
-                "wallet_address": wallet.wallet_address
+                "balance_usd": user.wallet.balance_usd,
+                "wallet_address": user.wallet.wallet_address
             }
         }), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
-# ==========================================
-# إدارة المحفظة (Wallet)
-# ==========================================
+    except Exception as e:
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+
+# --- المحفظة (Wallet) ---
+
 @app.route('/api/wallet/balance', methods=['GET'])
-@jwt_required()
+@jwt_required() # لا يمكن الوصول لهذا المسار إلا بتوكن صالح
 def get_balance():
     try:
+        # الحصول على إيميل المستخدم من التوكن (أكثر أماناً من قراءته من الطلب)
         current_user_email = get_jwt_identity()
         user = User.query.filter_by(email=current_user_email).first()
-        wallet = Wallet.query.filter_by(user_id=user.id).first()
+
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"}), 404
 
         return jsonify({
             "status": "success",
             "wallet": {
-                "balance_usd": wallet.balance_usd,
-                "wallet_address": wallet.wallet_address
+                "balance_usd": user.wallet.balance_usd,
+                "wallet_address": user.wallet.wallet_address
             }
         }), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
-# ==========================================
-# نظام الضمان (Escrow Engine)
-# ==========================================
+    except Exception as e:
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+
+# --- المعاملات (Escrow) ---
+
 @app.route('/api/escrow/create', methods=['POST'])
-@jwt_required()
+@jwt_required() # حماية المسار
 def create_escrow():
     try:
-        current_user_email = get_jwt_identity()
         data = request.get_json() or {}
+        
+        # المشتري هو المستخدم الحالي صاحب التوكن (لا يمكن انتحال شخصيته)
+        buyer_email = get_jwt_identity()
         seller_email = data.get('seller')
         
         try:
@@ -159,31 +181,30 @@ def create_escrow():
         if amount <= 0:
             return jsonify({"status": "error", "message": "Amount must be greater than zero"}), 400
 
-        buyer_user = User.query.filter_by(email=current_user_email).first()
-        seller_user = User.query.filter_by(email=seller_email).first()
+        # جلب محافظ الطرفين
+        buyer_wallet = Wallet.query.join(User).filter(User.email == buyer_email).first()
+        seller_wallet = Wallet.query.join(User).filter(User.email == seller_email).first()
 
-        if not seller_user:
-            return jsonify({"status": "error", "message": "Seller not found"}), 404
-
-        buyer_wallet = Wallet.query.filter_by(user_id=buyer_user.id).first()
-        seller_wallet = Wallet.query.filter_by(user_id=seller_user.id).first()
+        if not buyer_wallet or not seller_wallet:
+            return jsonify({"status": "error", "message": "Buyer or Seller wallet missing"}), 400
 
         if buyer_wallet.balance_usd < amount:
             return jsonify({"status": "error", "message": "Insufficient funds"}), 400
 
-        # خصم الأموال وحجزها
+        # خصم المبلغ من المشتري
         buyer_wallet.balance_usd -= amount
-        tx_id = f"escrow_{uuid.uuid4().hex}"
         
-        new_tx = EscrowTransaction(
+        # إنشاء المعاملة
+        tx_id = f"escrow_{uuid.uuid4().hex}"
+        new_escrow = Escrow(
             id=tx_id,
-            buyer_email=current_user_email,
+            buyer_email=buyer_email,
             seller_email=seller_email,
             amount=amount,
             status="LOCKED"
         )
         
-        db.session.add(new_tx)
+        db.session.add(new_escrow)
         db.session.commit()
 
         return jsonify({
@@ -191,28 +212,31 @@ def create_escrow():
             "transaction_id": tx_id,
             "message": "Funds locked securely in Escrow"
         }), 201
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
 
 @app.route('/api/escrow/release', methods=['POST'])
-@jwt_required()
+@jwt_required() # حماية المسار
 def release_escrow():
     try:
-        current_user_email = get_jwt_identity()
         data = request.get_json() or {}
         tx_id = data.get('transaction_id')
+        current_user_email = get_jwt_identity()
 
-        tx = EscrowTransaction.query.filter_by(id=tx_id).first()
+        tx = Escrow.query.get(tx_id)
         if not tx or tx.status != "LOCKED":
-            return jsonify({"status": "error", "message": "Invalid or completed transaction"}), 400
+            return jsonify({"status": "error", "message": "Invalid or already completed transaction"}), 400
 
-        # التأكد أن المشتري فقط أو الأطراف المصرح لها تقوم بالتحرير
+        # التحقق: فقط المشتري هو من يحق له تحرير الأموال
         if tx.buyer_email != current_user_email:
-            return jsonify({"status": "error", "message": "Unauthorized action"}), 403
+            return jsonify({"status": "error", "message": "Unauthorized to release these funds"}), 403
 
-        seller_user = User.query.filter_by(email=tx.seller_email).first()
-        seller_wallet = Wallet.query.filter_by(user_id=seller_user.id).first()
+        # إضافة الأموال للبائع
+        seller_wallet = Wallet.query.join(User).filter(User.email == tx.seller_email).first()
+        if not seller_wallet:
+            return jsonify({"status": "error", "message": "Seller wallet not found"}), 404
 
         seller_wallet.balance_usd += tx.amount
         tx.status = "RELEASED"
@@ -223,9 +247,11 @@ def release_escrow():
             "status": "success",
             "message": "Funds released to seller successfully"
         }), 200
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
