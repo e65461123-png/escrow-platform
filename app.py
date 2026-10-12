@@ -101,7 +101,7 @@ def register():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": "Internal server error"}), 500
+        import traceback; traceback.print_exc(); return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -127,7 +127,7 @@ def login():
         }), 200
 
     except Exception as e:
-        return jsonify({"status": "error", "message": "Internal server error"}), 500
+        import traceback; traceback.print_exc(); return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/wallet/balance', methods=['GET'])
 @jwt_required()
@@ -148,7 +148,7 @@ def get_balance():
         }), 200
 
     except Exception as e:
-        return jsonify({"status": "error", "message": "Internal server error"}), 500
+        import traceback; traceback.print_exc(); return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/escrow/create', methods=['POST'])
 @jwt_required()
@@ -197,7 +197,7 @@ def create_escrow():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": "Internal server error"}), 500
+        import traceback; traceback.print_exc(); return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/escrow/release', methods=['POST'])
 @jwt_required()
@@ -230,7 +230,7 @@ def release_escrow():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": "Internal server error"}), 500
+        import traceback; traceback.print_exc(); return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
