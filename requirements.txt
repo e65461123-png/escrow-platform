@@ -14,3 +14,4 @@ fpdf2>=2.7.8
 groq>=0.4.0
 pg8000>=1.30.0
 pg8000
+Flask-JWT-Extended
