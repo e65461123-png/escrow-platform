@@ -3,113 +3,333 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EssamElkomy 369</title>
+<title>منصة Escrow الآمنة</title>
 <style>
-*{box-sizing:border-box}
-body{background:#0a0e27;color:#fff;font-family:system-ui,sans-serif;margin:0;padding:20px;display:flex;justify-content:center;min-height:100vh}
-.container{width:100%;max-width:520px}
-.banner{background:linear-gradient(90deg,#1a237e,#3949ab);padding:12px;border-radius:8px;text-align:center;font-size:13px;margin-bottom:20px}
-h1{text-align:center;font-size:24px;margin:10px 0}
-.subtitle{text-align:center;font-size:13px;color:#aaa;margin-bottom:20px}
-.cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px}
-.card{background:#0f1533;padding:15px 8px;border-radius:10px;text-align:center;border:1px solid #1a237e}
-.card h3{font-size:13px;color:#4fc3f7;margin:0 0 5px}
-.card p{font-size:10px;color:#999;line-height:1.5;margin:0}
-.form-box{background:#0f1533;padding:20px;border-radius:12px;border:1px solid #1a237e}
-.form-box h2{font-size:16px;color:#4fc3f7;margin:0 0 15px}
-form{display:flex;flex-direction:column;gap:12px}
-label{font-size:13px;color:#bbb}
-input,textarea,select{background:#1a1f3d;border:1px solid #2a3050;color:#fff;padding:12px;border-radius:8px;font-size:14px;outline:none;font-family:inherit;width:100%}
-input:focus,textarea:focus,select:focus{border-color:#4fc3f7}
-textarea{resize:vertical;min-height:100px}
-button{background:#1976d2;color:#fff;border:none;padding:14px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer}
-button:hover{background:#1565c0}
-.payment-info{background:#0d1a3a;border-right:3px solid #4fc3f7;padding:12px;border-radius:8px;font-size:13px;color:#90caf9;display:none}
-.payment-info.active{display:block}
-.payment-info .num{color:#ffb74d;font-weight:bold;font-size:15px}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+body { background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); min-height: 100vh; color: #fff; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.container { width: 100%; max-width: 420px; background: rgba(255,255,255,0.07); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.4); animation: fadeIn 0.5s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+h1 { text-align: center; font-size: 24px; margin-bottom: 8px; background: linear-gradient(90deg, #00d4ff, #7b2ff7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.subtitle { text-align: center; color: #aaa; font-size: 13px; margin-bottom: 25px; }
+.tabs { display: flex; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 5px; margin-bottom: 20px; }
+.tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; border-radius: 8px; transition: all 0.3s; color: #aaa; font-weight: 600; }
+.tab.active { background: linear-gradient(90deg, #00d4ff, #7b2ff7); color: #fff; }
+.form-group { margin-bottom: 15px; }
+label { display: block; margin-bottom: 6px; color: #ccc; font-size: 13px; }
+input { width: 100%; padding: 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 14px; transition: all 0.3s; }
+input:focus { outline: none; border-color: #00d4ff; background: rgba(0,0,0,0.5); }
+button { width: 100%; padding: 14px; background: linear-gradient(90deg, #00d4ff, #7b2ff7); border: none; border-radius: 10px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.2s, box-shadow 0.3s; margin-top: 10px; }
+button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(123,47,247,0.3); }
+button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.message { padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 13px; text-align: center; display: none; }
+.message.show { display: block; animation: fadeIn 0.3s; }
+.message.success { background: rgba(0,255,136,0.15); border: 1px solid rgba(0,255,136,0.3); color: #00ff88; }
+.message.error { background: rgba(255,59,48,0.15); border: 1px solid rgba(255,59,48,0.3); color: #ff3b30; }
+.hidden { display: none !important; }
+.wallet-card { background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(123,47,247,0.15)); border: 1px solid rgba(0,212,255,0.3); border-radius: 15px; padding: 20px; margin-bottom: 20px; }
+.wallet-label { font-size: 12px; color: #aaa; margin-bottom: 5px; }
+.wallet-balance { font-size: 32px; font-weight: 800; background: linear-gradient(90deg, #00d4ff, #7b2ff7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 15px; }
+.wallet-address { font-size: 11px; color: #888; word-break: break-all; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; }
+.section-title { font-size: 16px; margin-bottom: 12px; color: #00d4ff; font-weight: 700; }
+.escrow-item { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; margin-bottom: 10px; transition: all 0.3s; }
+.escrow-item:hover { border-color: rgba(0,212,255,0.3); }
+.escrow-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.escrow-amount { font-size: 18px; font-weight: 700; color: #00ff88; }
+.escrow-status { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 700; }
+.status-LOCKED { background: rgba(255,193,7,0.2); color: #ffc107; }
+.status-RELEASED { background: rgba(0,255,136,0.2); color: #00ff88; }
+.escrow-detail { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+.escrow-detail strong { color: #ddd; }
+.empty-state { text-align: center; padding: 30px; color: #666; font-size: 13px; }
+.logout-btn { background: rgba(255,59,48,0.2); border: 1px solid rgba(255,59,48,0.4); color: #ff3b30; margin-top: 20px; }
+.logout-btn:hover { background: rgba(255,59,48,0.3); box-shadow: 0 10px 20px rgba(255,59,48,0.2); }
+.release-btn { width: auto; padding: 6px 14px; font-size: 12px; margin-top: 8px; background: linear-gradient(90deg, #00ff88, #00d4ff); }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 8px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 <div class="container">
-<div class="banner">🚀 ابدأ مشروعك التجاري وتأكيد طلباتك فوراً ✅</div>
-<h1>EssamElkomy 369 🚀</h1>
-<p class="subtitle">منصتك الاحترافية للخدمات الرقمية، الأتمتة، وحلول الذكاء الاصطناعي.</p>
 
-<div class="cards">
-<div class="card"><h3>حلول الويب</h3><p>صفحات، رفع مواقع، إدارة محلية</p></div>
-<div class="card"><h3>سكربتات تيرمكس</h3><p>تطوير أدوات مخصصة، سكربتات ذكية</p></div>
-<div class="card"><h3>أتمتة وبوتات</h3><p>بوتات تيليجرام، أتمتة المهام</p></div>
-</div>
+  <!-- AUTH SECTION -->
+  <div id="authSection">
+    <h1>🔐 منصة Escrow الآمنة</h1>
+    <p class="subtitle">نظام حماية المعاملات المالية</p>
 
-<div class="form-box">
-<h2>📋 احجز خدمتك الآن</h2>
-<form id="orderForm">
-<label>اسمك الكريم:</label>
-<input type="text" id="name" placeholder="اكتب اسمك هنا..." required>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('login')">تسجيل الدخول</div>
+      <div class="tab" onclick="switchTab('register')">حساب جديد</div>
+    </div>
 
-<label>رقم الهاتف أو الواتساب:</label>
-<input type="tel" id="phone" placeholder="01xxxxxxxxx" required>
+    <!-- Login Form -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="loginEmail" placeholder="example@email.com">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="loginPassword" placeholder="••••••••">
+      </div>
+      <button onclick="login()" id="loginBtn">دخول</button>
+      <div class="message" id="loginMsg"></div>
+    </div>
 
-<label>الخدمة المطلوبة:</label>
-<select id="service" required>
-<option value="">-- اختر الخدمة --</option>
-<option value="تصميم صفحة هبوط">تصميم صفحة هبوط</option>
-<option value="تطوير سكربت بايثون">تطوير سكربت بايثون</option>
-<option value="بوت تيليجرام">بوت تيليجرام</option>
-<option value="أتمتة مهام">أتمتة مهام</option>
-<option value="حلول ذكاء اصطناعي">حلول ذكاء اصطناعي</option>
-</select>
+    <!-- Register Form -->
+    <div id="registerForm" class="hidden">
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="regEmail" placeholder="example@email.com">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="regPassword" placeholder="••••••••">
+      </div>
+      <button onclick="register()" id="regBtn">إنشاء حساب</button>
+      <div class="message" id="regMsg"></div>
+    </div>
+  </div>
 
-<label>وسيلة الدفع:</label>
-<select id="payment" required>
-<option value="">-- اختر وسيلة الدفع --</option>
-<option value="Vodafone Cash">Vodafone Cash</option>
-<option value="InstaPay">InstaPay</option>
-<option value="تحويل بنكي">تحويل بنكي</option>
-<option value="PayPal">PayPal</option>
-</select>
+  <!-- DASHBOARD SECTION -->
+  <div id="dashboardSection" class="hidden">
+    <h1>💼 لوحة التحكم</h1>
+    <p class="subtitle" id="userEmailDisplay"></p>
 
-<div id="payInfo" class="payment-info"></div>
+    <div class="wallet-card">
+      <div class="wallet-label">الرصيد الحالي</div>
+      <div class="wallet-balance" id="balanceDisplay">$0.00</div>
+      <div class="wallet-label">عنوان المحفظة</div>
+      <div class="wallet-address" id="walletAddress">-</div>
+    </div>
 
-<label>تفاصيل طلبك أو مشروعك:</label>
-<textarea id="details" placeholder="اكتب تفاصيل الخدمة المطلوبة..." required></textarea>
+    <div class="section-title">➕ إنشاء معاملة جديدة</div>
+    <div class="form-group">
+      <label>بريد البائع</label>
+      <input type="email" id="sellerEmail" placeholder="seller@email.com">
+    </div>
+    <div class="form-group">
+      <label>المبلغ (USD)</label>
+      <input type="number" id="escrowAmount" placeholder="100" min="0.01" step="0.01">
+    </div>
+    <button onclick="createEscrow()" id="createBtn">🔒 قفل المبلغ في Escrow</button>
+    <div class="message" id="escrowMsg"></div>
 
-<button type="submit">📩 إرسال الطلب فوراً 🚀</button>
-</form>
-</div>
+    <div class="section-title" style="margin-top:25px;">📋 معاملاتك</div>
+    <div id="escrowsList">
+      <div class="empty-state">لا توجد معاملات بعد</div>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">🚪 تسجيل الخروج</button>
+  </div>
+
 </div>
 
 <script>
-const payments = {
-"Vodafone Cash": "📱 <strong>Vodafone Cash:</strong><br>حول المبلغ على الأرقام:<br><span class='num'>01021664984</span><br><span class='num'>01017667875</span><br>وبعدها ابعت سكرين شوت على واتساب.",
-"InstaPay": "💳 <strong>InstaPay:</strong><br>حول على الإيميل: <span class='num'>essam@instapay</span><br>وبعدها ابعت سكرين شوت للتحويل.",
-"تحويل بنكي": "🏦 <strong>تحويل بنكي:</strong><br>هنتواصل معاك لارسال تفاصيل الحساب.",
-"PayPal": "🌍 <strong>PayPal:</strong><br>هنتواصل معاك لارسال لينك الدفع."
-};
-document.getElementById('payment').addEventListener('change', function(){
-const info = document.getElementById('payInfo');
-const val = this.value;
-if(val && payments[val]){ info.innerHTML = payments[val]; info.classList.add('active'); }
-else { info.classList.remove('active'); info.innerHTML=''; }
-});
-document.getElementById('orderForm').addEventListener('submit', async function(e){
-e.preventDefault();
-const btn = this.querySelector('button');
-btn.textContent = 'جاري الإرسال...'; btn.disabled = true;
-const fd = {
-name: document.getElementById('name').value,
-phone: document.getElementById('phone').value,
-service: document.getElementById('service').value,
-payment: document.getElementById('payment').value,
-details: document.getElementById('details').value
-};
-try{
-const r = await fetch('/submit_order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fd)});
-const d = await r.json();
-alert(d.message);
-if(d.status==='success'){ document.getElementById('orderForm').reset(); document.getElementById('payInfo').classList.remove('active'); }
-}catch(err){ alert('حدث خطأ، حاول مرة أخرى'); }
-btn.textContent = '📩 إرسال الطلب فوراً 🚀'; btn.disabled = false;
+const API = window.location.origin;
+
+function showMessage(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'message show ' + type;
+  setTimeout(() => { el.classList.remove('show'); }, 4000);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  if (tab === 'login') {
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
+  } else {
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('registerForm').classList.remove('hidden');
+  }
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  if (loading) btn.innerHTML = 'جاري المعالجة...<span class="spinner"></span>';
+  else if (btnId === 'loginBtn') btn.innerHTML = 'دخول';
+  else if (btnId === 'regBtn') btn.innerHTML = 'إنشاء حساب';
+  else if (btnId === 'createBtn') btn.innerHTML = '🔒 قفل المبلغ في Escrow';
+}
+
+async function register() {
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  if (!email || !password) return showMessage('regMsg', 'أدخل البريد وكلمة المرور', 'error');
+  
+  setLoading('regBtn', true);
+  try {
+    const res = await fetch(API + '/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showMessage('regMsg', '✅ تم التسجيل بنجاح! يمكنك الدخول الآن', 'success');
+      setTimeout(() => switchTab('login'), 1500);
+    } else {
+      showMessage('regMsg', '❌ ' + data.message, 'error');
+    }
+  } catch (e) {
+    showMessage('regMsg', '❌ خطأ في الاتصال بالسيرفر', 'error');
+  }
+  setLoading('regBtn', false);
+}
+
+async function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) return showMessage('loginMsg', 'أدخل البريد وكلمة المرور', 'error');
+  
+  setLoading('loginBtn', true);
+  try {
+    const res = await fetch(API + '/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('email', email);
+      showMessage('loginMsg', '✅ تم الدخول بنجاح!', 'success');
+      setTimeout(showDashboard, 800);
+    } else {
+      showMessage('loginMsg', '❌ بيانات الدخول غير صحيحة', 'error');
+    }
+  } catch (e) {
+    showMessage('loginMsg', '❌ خطأ في الاتصال بالسيرفر', 'error');
+  }
+  setLoading('loginBtn', false);
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('email');
+  location.reload();
+}
+
+async function showDashboard() {
+  const token = localStorage.getItem('token');
+  const email = localStorage.getItem('email');
+  if (!token) return;
+
+  document.getElementById('authSection').classList.add('hidden');
+  document.getElementById('dashboardSection').classList.remove('hidden');
+  document.getElementById('userEmailDisplay').textContent = email;
+
+  await loadBalance();
+  await loadEscrows();
+}
+
+async function loadBalance() {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(API + '/api/wallet/balance', {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      document.getElementById('balanceDisplay').textContent = '$' + data.wallet.balance_usd.toFixed(2);
+      document.getElementById('walletAddress').textContent = data.wallet.wallet_address;
+    } else if (res.status === 401) {
+      logout();
+    }
+  } catch (e) { console.error(e); }
+}
+
+async function loadEscrows() {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(API + '/api/escrow/list', {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    const data = await res.json();
+    const list = document.getElementById('escrowsList');
+    if (data.status === 'success' && data.escrows.length > 0) {
+      list.innerHTML = data.escrows.map(e => `
+        <div class="escrow-item">
+          <div class="escrow-header">
+            <span class="escrow-amount">$${e.amount.toFixed(2)}</span>
+            <span class="escrow-status status-${e.status}">${e.status}</span>
+          </div>
+          <div class="escrow-detail">👤 البائع: <strong>${e.seller}</strong></div>
+          <div class="escrow-detail">🆔 المشتري: <strong>${e.buyer}</strong></div>
+          <div class="escrow-detail">🎭 دورك: <strong>${e.role === 'buyer' ? 'مشتري' : 'بائع'}</strong></div>
+          ${e.status === 'LOCKED' && e.role === 'buyer' ? 
+            `<button class="release-btn" onclick="releaseEscrow('${e.id}')">✅ تحرير المبلغ للبائع</button>` : ''}
+        </div>
+      `).join('');
+    } else {
+      list.innerHTML = '<div class="empty-state">لا توجد معاملات بعد</div>';
+    }
+  } catch (e) { console.error(e); }
+}
+
+async function createEscrow() {
+  const seller = document.getElementById('sellerEmail').value.trim();
+  const amount = parseFloat(document.getElementById('escrowAmount').value);
+  if (!seller || !amount || amount <= 0) return showMessage('escrowMsg', 'أدخل بيانات صحيحة', 'error');
+  
+  const token = localStorage.getItem('token');
+  setLoading('createBtn', true);
+  try {
+    const res = await fetch(API + '/api/escrow/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({seller, amount})
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showMessage('escrowMsg', '✅ تم قفل المبلغ بنجاح!', 'success');
+      document.getElementById('sellerEmail').value = '';
+      document.getElementById('escrowAmount').value = '';
+      await loadBalance();
+      await loadEscrows();
+    } else {
+      showMessage('escrowMsg', '❌ ' + data.message, 'error');
+    }
+  } catch (e) {
+    showMessage('escrowMsg', '❌ خطأ في الاتصال', 'error');
+  }
+  setLoading('createBtn', false);
+}
+
+async function releaseEscrow(txId) {
+  if (!confirm('هل أنت متأكد من تحرير المبلغ للبائع؟')) return;
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(API + '/api/escrow/release', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({transaction_id: txId})
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert('✅ تم تحرير المبلغ بنجاح!');
+      await loadBalance();
+      await loadEscrows();
+    } else {
+      alert('❌ ' + data.message);
+    }
+  } catch (e) {
+    alert('❌ خطأ في الاتصال');
+  }
+}
+
+// Auto-login if token exists
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('token')) showDashboard();
 });
 </script>
 </body>

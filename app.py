@@ -1,6 +1,6 @@
 import os
 import uuid
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
@@ -69,11 +69,7 @@ with app.app_context():
 
 @app.route('/', methods=['GET'])
 def home():
-    return jsonify({
-        "status": "online",
-        "system": "Secure Enterprise Escrow Platform",
-        "security": "Encrypted & Protected"
-    }), 200
+    return render_template('index.html')
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
@@ -240,6 +236,32 @@ def release_escrow():
     except Exception as e:
         db.session.rollback()
         import traceback; traceback.print_exc(); return jsonify({"status": "error", "message": "Internal server error"}), 500
+
+@app.route('/api/escrow/list', methods=['GET'])
+@jwt_required()
+def list_escrows():
+    try:
+        current_user_email = get_jwt_identity()
+        escrows = Escrow.query.filter(
+            (Escrow.buyer_email == current_user_email) |
+            (Escrow.seller_email == current_user_email)
+        ).order_by(Escrow.id.desc()).all()
+        
+        result = []
+        for e in escrows:
+            result.append({
+                "id": e.id,
+                "buyer": e.buyer_email,
+                "seller": e.seller_email,
+                "amount": e.amount,
+                "status": e.status,
+                "role": "buyer" if e.buyer_email == current_user_email else "seller"
+            })
+        
+        return jsonify({"status": "success", "escrows": result}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
