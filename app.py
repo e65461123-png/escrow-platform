@@ -17,13 +17,18 @@ database_url = os.environ.get('DATABASE_URL')
 
 # إصلاح: استخدام psycopg2 (النسخة 2) لضمان الاستقرار على Render
 if database_url and database_url.startswith('postgresql://'):
-    database_url = database_url.replace('postgresql://', 'postgresql+psycopg2://', 1)
+    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
         if "?" in database_url:
-            database_url += "&sslmode=disable"
+            database_url += ""
         else:
-            database_url += "?sslmode=disable"
+            database_url += ""
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'prepare_threshold': None},
+    'pool_pre_ping': True,
+    'pool_recycle': 300
+}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
