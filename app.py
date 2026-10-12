@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# قاعدة بيانات مؤقتة في الذاكرة لتخزين أرصدة المحافظ
 wallets_db = {
     "user@example.com": {"balance": 100.0, "currency": "USD"}
 }
@@ -13,7 +12,7 @@ def login():
         data = request.get_json() or {}
         email = data.get('email', 'user@example.com')
         return jsonify({
-            "status": "success", 
+            "status": "success",
             "message": "login successful",
             "user": email
         }), 200
@@ -26,7 +25,6 @@ def get_wallet():
         data = request.get_json() or {}
         email = data.get('email', 'user@example.com')
         
-        # جلب بيانات المحفظة أو إنشاء محفظة افتراضية برصيد صفر
         wallet_info = wallets_db.get(email, {"balance": 0.0, "currency": "USD"})
         
         return jsonify({
