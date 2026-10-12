@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EssamElkomy 369</title>
+<style>
+*{box-sizing:border-box}
+body{background:#0a0e27;color:#fff;font-family:system-ui,sans-serif;margin:0;padding:20px;display:flex;justify-content:center;min-height:100vh}
+.container{width:100%;max-width:520px}
+.banner{background:linear-gradient(90deg,#1a237e,#3949ab);padding:12px;border-radius:8px;text-align:center;font-size:13px;margin-bottom:20px}
+h1{text-align:center;font-size:24px;margin:10px 0}
+.subtitle{text-align:center;font-size:13px;color:#aaa;margin-bottom:20px}
+.cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px}
+.card{background:#0f1533;padding:15px 8px;border-radius:10px;text-align:center;border:1px solid #1a237e}
+.card h3{font-size:13px;color:#4fc3f7;margin:0 0 5px}
+.card p{font-size:10px;color:#999;line-height:1.5;margin:0}
+.form-box{background:#0f1533;padding:20px;border-radius:12px;border:1px solid #1a237e}
+.form-box h2{font-size:16px;color:#4fc3f7;margin:0 0 15px}
+form{display:flex;flex-direction:column;gap:12px}
+label{font-size:13px;color:#bbb}
+input,textarea,select{background:#1a1f3d;border:1px solid #2a3050;color:#fff;padding:12px;border-radius:8px;font-size:14px;outline:none;font-family:inherit;width:100%}
+input:focus,textarea:focus,select:focus{border-color:#4fc3f7}
+textarea{resize:vertical;min-height:100px}
+button{background:#1976d2;color:#fff;border:none;padding:14px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer}
+button:hover{background:#1565c0}
+.payment-info{background:#0d1a3a;border-right:3px solid #4fc3f7;padding:12px;border-radius:8px;font-size:13px;color:#90caf9;display:none}
+.payment-info.active{display:block}
+.payment-info .num{color:#ffb74d;font-weight:bold;font-size:15px}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="banner">🚀 ابدأ مشروعك التجاري وتأكيد طلباتك فوراً ✅</div>
+<h1>EssamElkomy 369 🚀</h1>
+<p class="subtitle">منصتك الاحترافية للخدمات الرقمية، الأتمتة، وحلول الذكاء الاصطناعي.</p>
+
+<div class="cards">
+<div class="card"><h3>حلول الويب</h3><p>صفحات، رفع مواقع، إدارة محلية</p></div>
+<div class="card"><h3>سكربتات تيرمكس</h3><p>تطوير أدوات مخصصة، سكربتات ذكية</p></div>
+<div class="card"><h3>أتمتة وبوتات</h3><p>بوتات تيليجرام، أتمتة المهام</p></div>
+</div>
+
+<div class="form-box">
+<h2>📋 احجز خدمتك الآن</h2>
+<form id="orderForm">
+<label>اسمك الكريم:</label>
+<input type="text" id="name" placeholder="اكتب اسمك هنا..." required>
+
+<label>رقم الهاتف أو الواتساب:</label>
+<input type="tel" id="phone" placeholder="01xxxxxxxxx" required>
+
+<label>الخدمة المطلوبة:</label>
+<select id="service" required>
+<option value="">-- اختر الخدمة --</option>
+<option value="تصميم صفحة هبوط">تصميم صفحة هبوط</option>
+<option value="تطوير سكربت بايثون">تطوير سكربت بايثون</option>
+<option value="بوت تيليجرام">بوت تيليجرام</option>
+<option value="أتمتة مهام">أتمتة مهام</option>
+<option value="حلول ذكاء اصطناعي">حلول ذكاء اصطناعي</option>
+</select>
+
+<label>وسيلة الدفع:</label>
+<select id="payment" required>
+<option value="">-- اختر وسيلة الدفع --</option>
+<option value="Vodafone Cash">Vodafone Cash</option>
+<option value="InstaPay">InstaPay</option>
+<option value="تحويل بنكي">تحويل بنكي</option>
+<option value="PayPal">PayPal</option>
+</select>
+
+<div id="payInfo" class="payment-info"></div>
+
+<label>تفاصيل طلبك أو مشروعك:</label>
+<textarea id="details" placeholder="اكتب تفاصيل الخدمة المطلوبة..." required></textarea>
+
+<button type="submit">📩 إرسال الطلب فوراً 🚀</button>
+</form>
+</div>
+</div>
+
+<script>
+const payments = {
+"Vodafone Cash": "📱 <strong>Vodafone Cash:</strong><br>حول المبلغ على الأرقام:<br><span class='num'>01021664984</span><br><span class='num'>01017667875</span><br>وبعدها ابعت سكرين شوت على واتساب.",
+"InstaPay": "💳 <strong>InstaPay:</strong><br>حول على الإيميل: <span class='num'>essam@instapay</span><br>وبعدها ابعت سكرين شوت للتحويل.",
+"تحويل بنكي": "🏦 <strong>تحويل بنكي:</strong><br>هنتواصل معاك لارسال تفاصيل الحساب.",
+"PayPal": "🌍 <strong>PayPal:</strong><br>هنتواصل معاك لارسال لينك الدفع."
+};
+document.getElementById('payment').addEventListener('change', function(){
+const info = document.getElementById('payInfo');
+const val = this.value;
+if(val && payments[val]){ info.innerHTML = payments[val]; info.classList.add('active'); }
+else { info.classList.remove('active'); info.innerHTML=''; }
+});
+document.getElementById('orderForm').addEventListener('submit', async function(e){
+e.preventDefault();
+const btn = this.querySelector('button');
+btn.textContent = 'جاري الإرسال...'; btn.disabled = true;
+const fd = {
+name: document.getElementById('name').value,
+phone: document.getElementById('phone').value,
+service: document.getElementById('service').value,
+payment: document.getElementById('payment').value,
+details: document.getElementById('details').value
+};
+try{
+const r = await fetch('/submit_order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fd)});
+const d = await r.json();
+alert(d.message);
+if(d.status==='success'){ document.getElementById('orderForm').reset(); document.getElementById('payInfo').classList.remove('active'); }
+}catch(err){ alert('حدث خطأ، حاول مرة أخرى'); }
+btn.textContent = '📩 إرسال الطلب فوراً 🚀'; btn.disabled = false;
+});
+</script>
+</body>
+</html>
