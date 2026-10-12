@@ -15,13 +15,9 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(32).hex())
 # ==========================================
 database_url = os.environ.get('DATABASE_URL')
 
-# إصلاح: استخدام psycopg2 (النسخة 2) لضمان الاستقرار على Render
+# إصلاح: استخدام psycopg (النسخة 3) مع إعدادات متوافقة مع PgBouncer
 if database_url and database_url.startswith('postgresql://'):
     database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
-        if "?" in database_url:
-            database_url += ""
-        else:
-            database_url += ""
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
